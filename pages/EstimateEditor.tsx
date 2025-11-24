@@ -6,6 +6,7 @@ import {
   EstimateItem, EstimateItemType, ResourceType, CalculatedEstimateItem, UserRole, EstimateStatus, NotificationType, PriceListCategory, PriceListItem, Counterparty, CounterpartyType, WorkCompletionAct, WorkCompletionActItem, Estimate, AIAnalysisResult, EstimatePaymentScheduleItem, DesignFile, DesignMarker, MeasurementProject, CalcBinding, MeasurementRoom
 } from '../types';
 import { AIService } from '../services/aiService';
+import { AINotificationService } from '../services/aiNotificationService';
 import { 
   ChevronDown, ChevronRight, Plus, Trash2, Copy, 
   Settings, Check, Lock, Send,
@@ -435,7 +436,7 @@ const CustomerView = ({ tree, expandedIds, toggleExpand }: any) => (
     </div>
 );
 
-const PaymentScheduleView = ({ estimate, totalAmount, canEdit, onUpdate }: any) => {
+const PaymentScheduleView = ({ estimate, totalAmount, canEdit, onUpdate, currentUser, aiConfig }: any) => {
     const [schedule, setSchedule] = useState<EstimatePaymentScheduleItem[]>(
         estimate.payment_schedule || [
             {
@@ -444,7 +445,8 @@ const PaymentScheduleView = ({ estimate, totalAmount, canEdit, onUpdate }: any) 
                 amount: Math.round(totalAmount * 0.3),
                 percent: 30,
                 description: 'Начальный платеж',
-                is_paid: false
+                is_paid: false,
+                version_history: []
             },
             {
                 id: uuidv4(),
@@ -452,7 +454,8 @@ const PaymentScheduleView = ({ estimate, totalAmount, canEdit, onUpdate }: any) 
                 amount: Math.round(totalAmount * 0.4),
                 percent: 40,
                 description: 'Промежуточный платеж',
-                is_paid: false
+                is_paid: false,
+                version_history: []
             },
             {
                 id: uuidv4(),
@@ -460,7 +463,8 @@ const PaymentScheduleView = ({ estimate, totalAmount, canEdit, onUpdate }: any) 
                 amount: Math.round(totalAmount * 0.3),
                 percent: 30,
                 description: 'Финальный платеж',
-                is_paid: false
+                is_paid: false,
+                version_history: []
             }
         ]
     );
@@ -470,11 +474,65 @@ const PaymentScheduleView = ({ estimate, totalAmount, canEdit, onUpdate }: any) 
         percent: 0,
         description: ''
     });
+    
+    // AI States
+    const [aiInsights, setAiInsights] = useState<any>(null);
+    const [loadingAI, setLoadingAI] = useState(false);
+    const [showHistory, setShowHistory] = useState<string | null>(null);
 
     const totalScheduled = schedule.reduce((sum, item) => sum + item.amount, 0);
     const totalPaid = schedule.filter(item => item.is_paid).reduce((sum, item) => sum + item.amount, 0);
 
-    const handleAddItem = () => {
+    // AI Analysis function
+    const analyzePaymentWithAI = async (payment: EstimatePaymentScheduleItem) => {
+        if (!aiConfig) return;
+        
+        setLoadingAI(true);
+        try {
+            const context = {
+                project_id: estimate.project_id,
+                estimate_id: estimate.id,
+                payment_schedule: schedule,
+                total_estimate_amount: totalAmount
+            };
+            
+            const analysis = await AIService.analyzePaymentRisk(payment, context, aiConfig);
+            
+            // Update payment with AI analysis
+            const updatedSchedule = schedule.map(item => 
+                item.id === payment.id ? {
+                    ...item,
+                    ai_score: analysis.score,
+                    ai_risk_factors: analysis.risk_factors,
+                    ai_recommendations: analysis.recommendations
+                } : item
+            );
+            
+            setSchedule(updatedSchedule);
+            
+            // Generate AI notification
+            const notification = await AINotificationService.generatePaymentNotification(
+                analysis.score,
+                payment,
+                context,
+                aiConfig
+            );
+            
+            // Show AI insights
+            setAiInsights({
+                payment_id: payment.id,
+                analysis,
+                notification
+            });
+            
+        } catch (error) {
+            console.error("AI Analysis Error:", error);
+        } finally {
+            setLoadingAI(false);
+        }
+    };
+
+    const handleAddItem = async () => {
         if (newItem.percent > 0 && newItem.description) {
             const amount = Math.round(totalAmount * newItem.percent / 100);
             const item: EstimatePaymentScheduleItem = {
@@ -483,12 +541,21 @@ const PaymentScheduleView = ({ estimate, totalAmount, canEdit, onUpdate }: any) 
                 amount,
                 percent: newItem.percent,
                 description: newItem.description,
-                is_paid: false
+                is_paid: false,
+                version_history: []
             };
-            setSchedule([...schedule, item].sort((a, b) => a.date.localeCompare(b.date)));
+            
+            const updatedSchedule = [...schedule, item].sort((a, b) => a.date.localeCompare(b.date));
+            setSchedule(updatedSchedule);
             setNewItem({ date: new Date().toISOString().split('T')[0], percent: 0, description: '' });
             setIsAdding(false);
-            onUpdate && onUpdate({ ...estimate, payment_schedule: [...schedule, item] });
+            
+            // Auto-analyze with AI if available
+            if (aiConfig) {
+                await analyzePaymentWithAI(item);
+            }
+            
+            onUpdate && onUpdate({ ...estimate, payment_schedule: updatedSchedule });
         }
     };
 
@@ -520,23 +587,111 @@ const PaymentScheduleView = ({ estimate, totalAmount, canEdit, onUpdate }: any) 
                 )}
             </div>
 
-            {/* Summary */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                <div className="bg-white p-4 rounded-lg border border-slate-200">
-                    <div className="text-sm text-slate-500">Всего по смете</div>
-                    <div className="text-xl font-bold text-slate-800">{totalAmount.toLocaleString()} ₽</div>
+            {/* Payment Summary - только финансовые метрики платежей */}
+            <div className="bg-white p-4 rounded-lg border border-slate-200 mb-6">
+                <div className="flex items-center justify-between">
+                    <div>
+                        <div className="text-sm text-slate-500">Финансовый свод по графику</div>
+                        <div className="flex items-baseline gap-4 mt-1">
+                            <div className="text-xl font-bold text-blue-600">{totalScheduled.toLocaleString()} ₽</div>
+                            <div className="text-sm text-slate-500">из {totalAmount.toLocaleString()} ₽ ({((totalScheduled / totalAmount) * 100).toFixed(1)}%)</div>
+                        </div>
+                    </div>
+                    <div className="text-right">
+                        <div className="text-sm text-slate-500">Оплачено</div>
+                        <div className="text-lg font-bold text-green-600">{totalPaid.toLocaleString()} ₽</div>
+                        <div className="text-xs text-slate-500">{((totalPaid / totalAmount) * 100).toFixed(1)}%</div>
+                    </div>
                 </div>
-                <div className="bg-white p-4 rounded-lg border border-slate-200">
-                    <div className="text-sm text-slate-500">Запланировано</div>
-                    <div className="text-xl font-bold text-blue-600">{totalScheduled.toLocaleString()} ₽</div>
-                    <div className="text-xs text-slate-500">{((totalScheduled / totalAmount) * 100).toFixed(1)}%</div>
-                </div>
-                <div className="bg-white p-4 rounded-lg border border-slate-200">
-                    <div className="text-sm text-slate-500">Оплачено</div>
-                    <div className="text-xl font-bold text-green-600">{totalPaid.toLocaleString()} ₽</div>
-                    <div className="text-xs text-slate-500">{((totalPaid / totalAmount) * 100).toFixed(1)}%</div>
+                <div className="mt-3 text-xs text-blue-600">
+                    💡 Детальные KPI проекта доступны во вкладке "Смета"
                 </div>
             </div>
+
+            {/* AI Payment Insights */}
+            {aiConfig && (
+                <div className="bg-purple-50 p-4 rounded-lg border border-purple-200 mb-6">
+                    <div className="flex items-center justify-between mb-3">
+                        <h4 className="font-bold text-purple-800 flex items-center">
+                            <Sparkles size={16} className="mr-2" />
+                            AI Инсайт по графику платежей
+                        </h4>
+                        <button
+                            onClick={() => {
+                                // Analyze all payments with AI
+                                schedule.forEach(payment => {
+                                    if (!payment.ai_score && !payment.is_paid) {
+                                        analyzePaymentWithAI(payment);
+                                    }
+                                });
+                            }}
+                            disabled={loadingAI}
+                            className="px-3 py-1 bg-purple-600 text-white rounded-lg text-sm hover:bg-purple-700 disabled:opacity-50"
+                        >
+                            {loadingAI ? 'Анализ...' : '🚀 Анализировать все'}
+                        </button>
+                    </div>
+                    
+                    {/* AI Insights Summary */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
+                        <div className="bg-white p-3 rounded-lg">
+                            <div className="text-xs text-purple-600 font-medium">Средний AI Score</div>
+                            <div className="text-lg font-bold text-purple-800">
+                                {schedule.filter(p => p.ai_score).length > 0 
+                                    ? Math.round(schedule.filter(p => p.ai_score).reduce((sum, p) => sum + p.ai_score!, 0) / schedule.filter(p => p.ai_score).length)
+                                    : '—'}
+                            </div>
+                        </div>
+                        <div className="bg-white p-3 rounded-lg">
+                            <div className="text-xs text-purple-600 font-medium">Риски обнаружено</div>
+                            <div className="text-lg font-bold text-red-600">
+                                {schedule.filter(p => p.ai_risk_factors && p.ai_risk_factors.length > 0).length}
+                            </div>
+                        </div>
+                        <div className="bg-white p-3 rounded-lg">
+                            <div className="text-xs text-purple-600 font-medium">Проанализировано</div>
+                            <div className="text-lg font-bold text-green-600">
+                                {schedule.filter(p => p.ai_score).length}/{schedule.length}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    {/* Current AI Insights */}
+                    {aiInsights && (
+                        <div className="mt-4 p-3 bg-white rounded-lg border border-purple-200">
+                            <div className="flex items-center justify-between mb-2">
+                                <span className="text-sm font-medium text-purple-800">
+                                    Анализ платежа: {schedule.find(p => p.id === aiInsights.payment_id)?.description}
+                                </span>
+                                <button
+                                    onClick={() => setAiInsights(null)}
+                                    className="text-purple-600 hover:text-purple-800"
+                                >
+                                    <X size={16} />
+                                </button>
+                            </div>
+                            <div className="text-xs space-y-1">
+                                <div className="flex items-center gap-2">
+                                    <span className="font-medium">Score:</span>
+                                    <span className={`font-bold ${aiInsights.analysis.score >= 75 ? 'text-green-600' : aiInsights.analysis.score >= 50 ? 'text-yellow-600' : 'text-red-600'}`}>
+                                        {aiInsights.analysis.score}/100
+                                    </span>
+                                </div>
+                                {aiInsights.analysis.risk_factors.length > 0 && (
+                                    <div>
+                                        <span className="font-medium">Риски:</span>
+                                        <ul className="ml-4 list-disc">
+                                            {aiInsights.analysis.risk_factors.slice(0, 2).map((risk: string, i: number) => (
+                                                <li key={i} className="text-red-600">{risk}</li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
+                </div>
+            )}
 
             {/* Add New Item Form */}
             {isAdding && (
@@ -585,10 +740,15 @@ const PaymentScheduleView = ({ estimate, totalAmount, canEdit, onUpdate }: any) 
             {/* Schedule Items */}
             <div className="space-y-3">
                 {schedule.map((item, index) => (
-                    <div key={item.id} className="bg-white p-4 rounded-lg border border-slate-200">
+                    <div key={item.id} className={`bg-white p-4 rounded-lg border ${
+                        item.ai_score ? 
+                            (item.ai_score >= 75 ? 'border-green-200' : 
+                             item.ai_score >= 50 ? 'border-yellow-200' : 'border-red-200') 
+                            : 'border-slate-200'
+                    }`}>
                         <div className="flex items-center justify-between">
                             <div className="flex-1">
-                                <div className="flex items-center gap-4">
+                                <div className="flex items-center gap-3">
                                     <span className="text-sm font-medium text-slate-500">Этап {index + 1}</span>
                                     <span className="text-sm text-slate-600">{item.date}</span>
                                     {item.is_paid && (
@@ -596,14 +756,70 @@ const PaymentScheduleView = ({ estimate, totalAmount, canEdit, onUpdate }: any) 
                                             Оплачено
                                         </span>
                                     )}
+                                    
+                                    {/* AI Score Indicator */}
+                                    {aiConfig && item.ai_score && (
+                                        <div className="flex items-center gap-1">
+                                            <div className={`w-2 h-2 rounded-full ${
+                                                item.ai_score >= 75 ? 'bg-green-500' : 
+                                                item.ai_score >= 50 ? 'bg-yellow-500' : 'bg-red-500'
+                                            }`} />
+                                            <span className={`text-xs font-medium ${
+                                                item.ai_score >= 75 ? 'text-green-600' : 
+                                                item.ai_score >= 50 ? 'text-yellow-600' : 'text-red-600'
+                                            }`}>
+                                                AI {item.ai_score}/100
+                                            </span>
+                                        </div>
+                                    )}
                                 </div>
+                                
                                 <div className="mt-1 font-medium text-slate-800">{item.description}</div>
+                                
+                                {/* AI Risk Factors */}
+                                {aiConfig && item.ai_risk_factors && item.ai_risk_factors.length > 0 && (
+                                    <div className="mt-2 flex flex-wrap gap-1">
+                                        {item.ai_risk_factors.slice(0, 2).map((risk, i) => (
+                                            <span key={i} className="px-2 py-1 bg-red-50 text-red-700 text-xs rounded-full">
+                                                ⚠️ {risk}
+                                            </span>
+                                        ))}
+                                        {item.ai_risk_factors.length > 2 && (
+                                            <span className="px-2 py-1 bg-red-50 text-red-700 text-xs rounded-full">
+                                                +{item.ai_risk_factors.length - 2} еще
+                                            </span>
+                                        )}
+                                    </div>
+                                )}
+                                
                                 <div className="mt-2 flex items-center gap-4">
                                     <span className="text-lg font-bold text-blue-600">{item.amount.toLocaleString()} ₽</span>
                                     <span className="text-sm text-slate-500">{item.percent}% от суммы</span>
                                 </div>
                             </div>
+                            
                             <div className="flex items-center gap-2">
+                                {/* AI Analysis Button */}
+                                {aiConfig && !item.is_paid && (
+                                    <button
+                                        onClick={() => analyzePaymentWithAI(item)}
+                                        disabled={loadingAI}
+                                        className="p-2 text-purple-600 hover:bg-purple-50 rounded-lg border border-purple-200 disabled:opacity-50"
+                                        title="Анализировать с ИИ"
+                                    >
+                                        <Sparkles size={16} />
+                                    </button>
+                                )}
+                                
+                                {/* History Button */}
+                                <button
+                                    onClick={() => setShowHistory(showHistory === item.id ? null : item.id)}
+                                    className="p-2 text-slate-600 hover:bg-slate-50 rounded-lg border border-slate-200"
+                                    title="История изменений"
+                                >
+                                    <Clock size={16} />
+                                </button>
+                                
                                 {canEdit && (
                                     <>
                                         <button
@@ -627,6 +843,64 @@ const PaymentScheduleView = ({ estimate, totalAmount, canEdit, onUpdate }: any) 
                                 )}
                             </div>
                         </div>
+                        
+                        {/* Payment History */}
+                        {showHistory === item.id && (
+                            <div className="mt-4 pt-4 border-t border-slate-200">
+                                <div className="flex items-center justify-between mb-3">
+                                    <h5 className="text-sm font-medium text-slate-700 flex items-center">
+                                        <Clock size={14} className="mr-2" />
+                                        История изменений
+                                    </h5>
+                                    <button
+                                        onClick={() => setShowHistory(null)}
+                                        className="text-slate-400 hover:text-slate-600"
+                                    >
+                                        <X size={14} />
+                                    </button>
+                                </div>
+                                
+                                {item.version_history && item.version_history.length > 0 ? (
+                                    <div className="space-y-2">
+                                        {item.version_history.map((version, i) => (
+                                            <div key={version.id} className="text-xs p-2 bg-slate-50 rounded-lg">
+                                                <div className="flex items-center justify-between mb-1">
+                                                    <span className="font-medium text-slate-700">
+                                                        {new Date(version.changed_at).toLocaleString('ru-RU')}
+                                                    </span>
+                                                    <span className="text-slate-500">{version.changed_by}</span>
+                                                </div>
+                                                <div className="space-y-1">
+                                                    {version.changes.map((change, j) => (
+                                                        <div key={j} className="text-slate-600">
+                                                            <span className="font-medium">{change.field}:</span>
+                                                            <span className="line-through text-red-600 mx-1">{change.old_value}</span>
+                                                            <span className="text-green-600">→ {change.new_value}</span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                                {version.ai_analysis && (
+                                                    <div className="mt-2 p-2 bg-purple-50 rounded text-purple-700">
+                                                        <div className="font-medium">Анализ ИИ:</div>
+                                                        <div>Риск: {version.ai_analysis.risk_level}</div>
+                                                        <div className="text-xs mt-1">{version.ai_analysis.impact_forecast}</div>
+                                                    </div>
+                                                )}
+                                                {version.approval_required && (
+                                                    <div className="mt-1 text-orange-600 font-medium">
+                                                        ⚠️ Требуется согласование
+                                                    </div>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <div className="text-xs text-slate-500 text-center py-4">
+                                        История изменений отсутствует
+                                    </div>
+                                )}
+                            </div>
+                        )}
                     </div>
                 ))}
             </div>
@@ -1666,7 +1940,7 @@ export const EstimateEditor: React.FC = () => {
                     />
                 )}
                 {activeTab === 'customer' && <CustomerView tree={tree} expandedIds={expandedIds} toggleExpand={toggleExpand} />}
-                {activeTab === 'schedule' && <PaymentScheduleView estimate={estimate} totalAmount={kpiTotalPrice} canEdit={canEdit} onUpdate={updateEstimate} />}
+                {activeTab === 'schedule' && <PaymentScheduleView estimate={estimate} totalAmount={kpiTotalPrice} canEdit={canEdit} onUpdate={updateEstimate} currentUser={currentUser} aiConfig={aiConfig} />}
                 {activeTab === 'contractor' && <ContractorView tree={tree} expandedIds={expandedIds} toggleExpand={toggleExpand} counterparties={counterparties} canEdit={canEdit} onUpdate={updateEstimateItem} />}
                 {activeTab === 'execution' && <ExecutionView tree={tree} expandedIds={expandedIds} toggleExpand={toggleExpand} />}
                 {activeTab === 'acts' && <EstimateActsView estimateId={estimateId!} projectId={projectId!} estimateItems={projectEstimateItems} acts={acts} counterparties={counterparties} currentUser={currentUser} addAct={addAct} updateAct={updateAct} deleteAct={deleteAct} canEdit={canEdit} />}

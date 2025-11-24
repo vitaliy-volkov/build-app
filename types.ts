@@ -174,6 +174,25 @@ export enum VatMode {
   Added = "Сверху"
 }
 
+// --- AI Payment Analysis Types ---
+export interface PaymentVersionHistory {
+  id: string;
+  payment_schedule_id: string;
+  changed_at: string;
+  changed_by: string;
+  changes: {
+    field: 'date' | 'amount' | 'percent' | 'description';
+    old_value: any;
+    new_value: any;
+  }[];
+  ai_analysis?: {
+    risk_level: 'low' | 'medium' | 'high';
+    recommendations: string[];
+    impact_forecast: string;
+  };
+  approval_required: boolean;
+}
+
 export interface EstimatePaymentScheduleItem {
   id: string;
   date: string;
@@ -181,6 +200,13 @@ export interface EstimatePaymentScheduleItem {
   percent: number; // % of total estimate
   description: string;
   is_paid: boolean;
+  
+  // AI Enhancement Fields
+  ai_score?: number;              // Оценка от ИИ (0-100)
+  ai_risk_factors?: string[];     // Факторы риска
+  ai_recommendations?: string[];   // Рекомендации
+  forecast_date?: string;          // Прогнозируемая дата
+  version_history: PaymentVersionHistory[];
 }
 
 export interface Estimate {
@@ -373,7 +399,10 @@ export enum NotificationType {
   Info = "info",
   Success = "success",
   Warning = "warning",
-  ActionRequired = "action_required" // For approvals
+  ActionRequired = "action_required", // For approvals
+  AIPaymentRecommendation = "ai_payment_recommendation", // AI payment analysis
+  AIInsight = "ai_insight", // AI generated insights
+  AIForecast = "ai_forecast" // AI predictions
 }
 
 export interface AppNotification {
@@ -391,6 +420,14 @@ export interface AppNotification {
     type: 'approve_estimate' | 'approve_payment' | 'approve_act';
     entity_id: string; // estimate_id or payment_id
   }
+  
+  // AI Enhancement Fields
+  ai_generated?: boolean;
+  ai_context?: {
+    urgency_level: 'low' | 'medium' | 'high';
+    predicted_impact: string;
+    suggested_actions: string[];
+  };
 }
 
 // --- NEW MODULES v5.0 (Design & Repair) ---
@@ -756,4 +793,159 @@ export interface MeasurementProject {
   created_at: string;
   updated_at: string;
   floors: MeasurementFloor[];
+}
+
+// --- AI Payment Analysis Types (v9.0) ---
+
+export interface AIAnalysis {
+  score: number; // 0-100
+  risk_level: 'low' | 'medium' | 'high';
+  risk_factors: string[];
+  recommendations: string[];
+  confidence: number; // 0-100
+  analysis_timestamp: string;
+}
+
+export interface PaymentContext {
+  project_id: string;
+  estimate_id: string;
+  payment_schedule: EstimatePaymentScheduleItem[];
+  total_estimate_amount: number;
+  client_history?: {
+    on_time_payment_rate: number;
+    average_delay_days: number;
+    total_projects_completed: number;
+  };
+  company_cash_flow?: {
+    current_balance: number;
+    upcoming_expenses: number;
+    projected_income: number;
+  };
+}
+
+export interface CashFlowForecast {
+  period_start: string;
+  period_end: string;
+  projected_income: number;
+  projected_expenses: number;
+  net_cash_flow: number;
+  risk_level: 'low' | 'medium' | 'high';
+  recommendations: string[];
+}
+
+export interface UserActivity {
+  user_id: string;
+  last_active: string;
+  notification_response_rate: number;
+  preferred_communication_time: string;
+  activity_patterns: {
+    morning_active: boolean;
+    evening_active: boolean;
+    weekend_active: boolean;
+  };
+}
+
+// AI Audit Trail for compliance
+export interface AIAuditTrail {
+  id: string;
+  timestamp: string;
+  model_version: string;
+  input_data_hash: string;
+  final_score: number;
+  recommendation: 'approve' | 'review' | 'reject';
+  confidence_level: number;
+  risk_factors: string[];
+  training_consent?: boolean;
+  detailed_analysis?: string;
+}
+
+// --- Multi-Level Approval Workflow Types ---
+
+export enum ApprovalStatus {
+  Draft = "Черновик",
+  AIAnalysis = "ИИ-анализ",
+  ForemanReview = "Проверка прорабом",
+  ManagerReview = "Проверка руководителем",
+  DirectorApproval = "Согласование директором",
+  Approved = "Одобрено",
+  Rejected = "Отклонено",
+  Paid = "Оплачено"
+}
+
+export enum ApprovalAction {
+  Create = "create",
+  Submit = "submit",
+  AIAnalyze = "ai_analyze",
+  ForemanApprove = "foreman_approve",
+  ForemanReject = "foreman_reject",
+  ManagerApprove = "manager_approve",
+  ManagerReject = "manager_reject",
+  DirectorApprove = "director_approve",
+  DirectorReject = "director_reject",
+  MarkPaid = "mark_paid"
+}
+
+export interface ApprovalStep {
+  id: string;
+  role: UserRole;
+  required: boolean;
+  status: 'pending' | 'completed' | 'skipped';
+  completed_at?: string;
+  completed_by?: string;
+  comments?: string;
+  ai_score?: number;
+}
+
+export interface PaymentApprovalWorkflow {
+  id: string;
+  payment_schedule_item_id: string;
+  project_id: string;
+  estimate_id: string;
+  current_status: ApprovalStatus;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+  
+  // Workflow steps
+  steps: ApprovalStep[];
+  
+  // AI Analysis
+  ai_analysis?: AIAnalysis;
+  ai_recommendation?: 'approve' | 'review' | 'reject';
+  
+  // Audit trail
+  history: PaymentApprovalHistory[];
+  
+  // Final decision
+  final_decision?: {
+    approved_by: string;
+    approved_at: string;
+    decision: 'approve' | 'reject';
+    final_comments: string;
+  };
+}
+
+export interface PaymentApprovalHistory {
+  id: string;
+  workflow_id: string;
+  action: ApprovalAction;
+  performed_by: string;
+  performed_at: string;
+  previous_status: ApprovalStatus;
+  new_status: ApprovalStatus;
+  comments?: string;
+  ai_score_at_time?: number;
+  attachments?: string[]; // Document IDs
+}
+
+// Multi-level approval configuration
+export interface ApprovalWorkflowConfig {
+  enabled: boolean;
+  auto_ai_analysis: boolean;
+  require_foreman_approval: boolean;
+  require_manager_approval: boolean;
+  require_director_approval: boolean;
+  auto_approve_threshold: number; // AI score for auto-approval
+  auto_reject_threshold: number; // AI score for auto-rejection
+  skip_steps_for_amount: number; // Skip steps for payments below this amount
 }

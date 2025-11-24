@@ -1,4 +1,4 @@
-import { Project, EstimateItem, EstimateItemType, ResourceType, PriceListItem, ChatMessage, ProjectEvent, Estimate, AIAnalysisResult, AIConfiguration, DesignMaterial, AITaskType } from '../types';
+import { Project, EstimateItem, EstimateItemType, ResourceType, PriceListItem, ChatMessage, ProjectEvent, Estimate, AIAnalysisResult, AIConfiguration, DesignMaterial, AITaskType, EstimatePaymentScheduleItem, AIAnalysis, PaymentContext, CashFlowForecast, AIAuditTrail } from '../types';
 import { getLLMAdapter, PromptPart } from './llmAdapters';
 
 // Helper to clean JSON string from markdown
@@ -510,5 +510,183 @@ export const AIService = {
       } catch (e) {
           return { riskLevel: 'Unknown', advice: 'Error analyzing risks' };
       }
+  },
+
+  // --- AI Payment Analyzer Methods (v9.0) ---
+
+  // 9. Analyze Payment Risk
+  async analyzePaymentRisk(payment: EstimatePaymentScheduleItem, context: PaymentContext, config: AIConfiguration): Promise<AIAnalysis> {
+    try {
+      const scheduleContext = context.payment_schedule.map(p => 
+        `${p.date}: ${p.amount}₽ (${p.percent}%) - ${p.is_paid ? 'Оплачен' : 'Ожидается'}`
+      ).join('\n');
+
+      const clientContext = context.client_history ? 
+        `История клиента: своевременная оплата ${context.client_history.on_time_payment_rate}%, средняя задержка ${context.client_history.average_delay_days} дней` : 
+        'Новый клиент (нет истории)';
+
+      const cashFlowContext = context.company_cash_flow ? 
+        `Текущий баланс: ${context.company_cash_flow.current_balance}₽, предстоящие расходы: ${context.company_cash_flow.upcoming_expenses}₽` : 
+        'Данные о кэшфлоу недоступны';
+
+      const prompt = `
+      Проанализируй риск платежа в строительном проекте.
+      
+      Текущий платеж: ${payment.date} - ${payment.amount}₽ (${payment.percent}%) - "${payment.description}"
+      
+      Контекст:
+      - Полный график платежей:
+      ${scheduleContext}
+      
+      - ${clientContext}
+      
+      - ${cashFlowContext}
+      
+      Оцени по шкале 0-100, где:
+      - 90-100: Минимальный риск (рекомендация авто-одобрения)
+      - 75-89: Низкий риск (сильная рекомендация одобрения)
+      - 50-74: Средний риск (требуется внимание)
+      - 25-49: Высокий риск (ручная проверка обязательна)
+      - 0-24: Критический риск (рекомендация отклонения)
+      
+      Верни JSON с полями:
+      {
+        "score": 0-100,
+        "risk_level": "low"|"medium"|"high",
+        "risk_factors": ["фактор1", "фактор2"],
+        "recommendations": ["рекомендация1", "рекомендация2"],
+        "confidence": 0-100
+      }
+      `;
+
+      const response = await callLLM('risk_assessment', config, {
+        parts: [textPart(prompt)],
+        responseFormat: 'json'
+      });
+
+      if (response.text) {
+        const analysis = JSON.parse(cleanJsonString(response.text));
+        return {
+          ...analysis,
+          analysis_timestamp: new Date().toISOString()
+        };
+      }
+
+      return {
+        score: 50,
+        risk_level: 'medium',
+        risk_factors: ['Ошибка анализа'],
+        recommendations: ['Требуется ручная проверка'],
+        confidence: 0,
+        analysis_timestamp: new Date().toISOString()
+      };
+    } catch (error) {
+      console.error("AI Payment Risk Analysis Error:", error);
+      return {
+        score: 50,
+        risk_level: 'medium',
+        risk_factors: ['Ошибка ИИ-анализа'],
+        recommendations: ['Требуется ручная проверка'],
+        confidence: 0,
+        analysis_timestamp: new Date().toISOString()
+      };
+    }
+  },
+
+  // 10. Forecast Cash Flow
+  async forecastCashFlow(payments: EstimatePaymentScheduleItem[], context: PaymentContext, config: AIConfiguration): Promise<CashFlowForecast> {
+    try {
+      const upcomingPayments = payments.filter(p => !p.is_paid && new Date(p.date) > new Date());
+      const totalUpcoming = upcomingPayments.reduce((sum, p) => sum + p.amount, 0);
+      
+      const startDate = new Date().toISOString().split('T')[0];
+      const endDate = upcomingPayments.length > 0 ? 
+        upcomingPayments[upcomingPayments.length - 1].date : 
+        new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
+      const prompt = `
+      Сделай прогноз кэшфлоу на основе графика платежей.
+      
+      Предстоящие платежи: ${upcomingPayments.map(p => `${p.date}: ${p.amount}₽`).join(', ')}
+      Общая сумма: ${totalUpcoming}₽
+      Период: ${startDate} - ${endDate}
+      
+      ${context.company_cash_flow ? 
+        `Текущий баланс: ${context.company_cash_flow.current_balance}₽, прогнозируемый доход: ${context.company_cash_flow.projected_income}₽` : 
+        'Данные о балансе недоступны'}
+      
+      Верни JSON:
+      {
+        "period_start": "${startDate}",
+        "period_end": "${endDate}",
+        "projected_income": число,
+        "projected_expenses": число,
+        "net_cash_flow": число,
+        "risk_level": "low"|"medium"|"high",
+        "recommendations": ["рекомендация1", "рекомендация2"]
+      }
+      `;
+
+      const response = await callLLM('risk_assessment', config, {
+        parts: [textPart(prompt)],
+        responseFormat: 'json'
+      });
+
+      if (response.text) {
+        return JSON.parse(cleanJsonString(response.text));
+      }
+
+      // Fallback
+      return {
+        period_start: startDate,
+        period_end: endDate,
+        projected_income: totalUpcoming,
+        projected_expenses: context.company_cash_flow?.upcoming_expenses || 0,
+        net_cash_flow: totalUpcoming - (context.company_cash_flow?.upcoming_expenses || 0),
+        risk_level: 'medium',
+        recommendations: ['Требуется детальный анализ кэшфлоу']
+      };
+    } catch (error) {
+      console.error("AI Cash Flow Forecast Error:", error);
+      throw new Error("Не удалось спрогнозировать кэшфлоу");
+    }
+  },
+
+  // 11. Generate Payment Recommendations
+  async generatePaymentRecommendations(context: PaymentContext, config: AIConfiguration): Promise<string[]> {
+    try {
+      const prompt = `
+      Проанализируй график платежей и дай рекомендации по оптимизации.
+      
+      График платежей: ${context.payment_schedule.map(p => `${p.date}: ${p.amount}₽ (${p.percent}%)`).join(', ')}
+      Общая сумма сметы: ${context.total_estimate_amount}₽
+      
+      ${context.client_history ? 
+        `Надежность клиента: ${context.client_history.on_time_payment_rate}% своевременных оплат` : 
+        'Новый клиент'}
+      
+      Дай 3-5 конкретных рекомендаций по русски:
+      1. Оптимизация тайминга платежей
+      2. Управление рисками
+      3. Улучшение кэшфлоу
+      4. Коммуникация с клиентом
+      
+      Верни JSON массив строк: ["рекомендация1", "рекомендация2", ...]
+      `;
+
+      const response = await callLLM('risk_assessment', config, {
+        parts: [textPart(prompt)],
+        responseFormat: 'json'
+      });
+
+      if (response.text) {
+        return JSON.parse(cleanJsonString(response.text));
+      }
+
+      return ['Проверьте соответствие графика этапам работ', 'Оцените финансовую устойчивость клиента'];
+    } catch (error) {
+      console.error("AI Payment Recommendations Error:", error);
+      return ['Ошибка генерации рекомендаций'];
+    }
   }
 };
