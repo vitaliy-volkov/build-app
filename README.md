@@ -1,21 +1,102 @@
 <div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
+<img width="1200" height="475" alt="Строй-Контроль Banner" src="assets/banner.svg" />
 </div>
 
-# Run and deploy your AI Studio app
+# Строй-Контроль
 
-This contains everything you need to run your app locally.
+Комплексная система управления строительством с интеграцией ИИ.
 
-View your app in AI Studio: https://ai.studio/apps/drive/1HyLJ9V1mE2wlXy3m8YqXNHMndIdiZiNI
+## О проекте
 
-## Run Locally
+Строй-Контроль - это современная веб-платформа для управления строительными проектами, сметами, финансами и взаимоотношениями с клиентами. Система построена на модульной архитектуре с использованием передовых технологий и интеграцией искусственного интеллекта.
 
-**Prerequisites:**  Node.js
+## Основные возможности
 
+- **Управление проектами**: Создание и отслеживание строительных проектов
+- **Сметы и расчеты**: Автоматизированное создание и анализ смет с помощью ИИ
+- **Финансовый учет**: Полный контроль над бюджетом и транзакциями
+- **CRM**: Управление клиентами, подрядчиками и поставщиками
+- **Документооборот**: Хранение и управление проектной документацией
+- **ИИ-ассистент**: Интеллектуальный анализ данных и рекомендации
+- **Модульная архитектура**: Ленивая загрузка модулей для оптимальной производительности
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
-# build-app
+## Архитектура
+
+- **Frontend**: React 19 + TypeScript + Vite
+- **Backend**: Go (в разработке) + Gin
+- **База данных**: PostgreSQL + Redis для кэширования
+- **ИИ**: Интеграция с Google Gemini, OpenAI GPT, Anthropic Claude, Groq
+- **Хранение файлов**: MinIO/S3
+- **Мониторинг**: Prometheus + Grafana + ELK Stack
+
+## Установка и запуск
+
+### Предварительные требования
+
+- Node.js (версия 18+)
+- npm или pnpm
+
+### Установка зависимостей
+
+```bash
+npm install
+# или
+pnpm install
+```
+
+### Настройка переменных окружения
+
+Создайте файл `.env.local` и добавьте необходимые API ключи:
+
+```
+GEMINI_API_KEY=your_gemini_api_key
+# Другие API ключи по необходимости
+```
+
+### Запуск в режиме разработки
+
+```bash
+npm run dev
+# или
+pnpm run dev
+```
+
+Приложение будет доступно по адресу: http://localhost:5173
+
+### Сборка для продакшена
+
+```bash
+npm run build
+npm run preview
+```
+
+## Документация
+
+Подробная документация находится в папке `docs/`:
+
+- [Архитектура системы](docs/ARCHITECTURE.md)
+- [План разработки](docs/DEVELOPMENT_PLAN.md)
+- [Интеграция ИИ](docs/AI_INTEGRATION_PLAN.md)
+- [План тестирования](docs/TESTING_PLAN.md)
+- [План развертывания](docs/DEPLOYMENT_PLAN.md)
+
+## Структура проекта
+
+```
+строй-контроль/
+├── components/          # Переиспользуемые компоненты
+├── pages/              # Страницы приложения
+├── services/           # Сервисы и API клиенты
+├── docs/               # Документация
+├── assets/             # Статические ресурсы
+└── types.ts            # Типы TypeScript
+```
+
+## Лицензия
+
+Этот проект является частным и предназначен для внутреннего использования.
+
+---
+
+*Версия: 0.0.1*
+*Дата обновления: 2024*
