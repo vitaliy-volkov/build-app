@@ -51,9 +51,9 @@ const resolveTaskRoute = (task: AITaskType, config: AIConfiguration) => {
     throw new Error(`Провайдер ${provider.name} отключен.`);
   }
 
-  const adapter = getLLMAdapter(provider.id);
+  const adapter = getLLMAdapter(provider.providerType);
   if (!adapter) {
-    throw new Error(`Провайдер ${provider.id} пока не поддерживается.`);
+    throw new Error(`Провайдер ${provider.providerType} пока не поддерживается.`);
   }
 
   return { adapter, provider, modelId: taskConfig.modelId };
@@ -81,7 +81,7 @@ const callLLM = async (
   }
 
   return adapter.invoke(
-    { apiKey: provider.apiKey, baseUrl: provider.baseUrl, providerId: provider.id },
+    { apiKey: provider.apiKey, baseUrl: provider.baseUrl, providerId: provider.providerType },
     {
       model: modelId,
       mode: options.mode || 'text',
