@@ -45,6 +45,8 @@ import { About, Contacts } from './pages/InfoPages';
 import { Blog, BlogPost } from './pages/Blog';
 import { v4 as uuidv4 } from 'uuid';
 import { ArrowRight } from 'lucide-react';
+import { useAuthStore } from './modules/core/auth/store';
+import { AuthGuard } from './modules/core/auth/AuthGuard';
 
 // --- State Management (Context) ---
 interface AppState {
@@ -169,9 +171,9 @@ export const useApp = () => {
 };
 
 const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const authStore = useAuthStore();
   const [users, setUsers] = useState(MOCK_USERS);
-  const [currentUser, setCurrentUser] = useState<User>(MOCK_USERS[0]); 
+  const [currentUser, setCurrentUser] = useState<User>(MOCK_USERS[0]); // Keep for legacy compatibility for now
   
   const [projects, setProjects] = useState(MOCK_PROJECTS);
   const [counterparties, setCounterparties] = useState(MOCK_COUNTERPARTIES);
@@ -213,28 +215,24 @@ const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [companySettings, setCompanySettings] = useState(MOCK_COMPANY_SETTINGS);
   const [aiConfig, setAiConfig] = useState(MOCK_AI_CONFIG);
 
-  // Auth Actions
+  // Auth Actions - Legacy wrappers for Context compatibility
   const login = (email: string, name?: string) => {
-    if (name) {
-      const newUser: User = {
-        id: uuidv4(),
-        name: name,
-        email: email,
-        role: UserRole.Director, 
-        avatar_initials: name.substring(0,2).toUpperCase(),
-        is_active: true
-      };
-      setUsers(prev => [...prev, newUser]);
-      setCurrentUser(newUser);
-    } else {
-      setCurrentUser(MOCK_USERS[0]);
-    }
-    setIsAuthenticated(true);
+    authStore.login(email, name);
   };
 
   const logout = () => {
-    setIsAuthenticated(false);
+    authStore.logout();
   };
+
+  // Sync Auth Store with Context
+  useEffect(() => {
+    if (authStore.user) {
+        // Map auth store user to context user format if needed
+        // For now they are compatible enough
+        const contextUser = authStore.user as unknown as User;
+        setCurrentUser(contextUser);
+    }
+  }, [authStore.user]);
 
   const addProject = (project: Project) => {
     setProjects(prev => [...prev, project]);
@@ -712,7 +710,7 @@ const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
   return (
     <AppContext.Provider value={{ 
-      isAuthenticated, login, logout,
+      isAuthenticated: authStore.isAuthenticated, login, logout,
       currentUser, users, projects, counterparties, estimates, estimateItems, payments, events, supplyRequests, documents, notifications, acts, priceListCategories, priceListItems,
       designFiles, specifications, tasks, chatMessages, photoStream,
       cashAccounts, financialArticles, transactions, leads, templates, 
@@ -732,7 +730,7 @@ const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
       updateCompanySettings, updateAIConfig
     }}>
       {children}
-      {isAuthenticated && <AIAssistant />}
+      {authStore.isAuthenticated && <AIAssistant />}
     </AppContext.Provider>
   );
 };
@@ -794,6 +792,9 @@ const ScrollToTop = () => {
 const AppRoutes = () => {
   const { isAuthenticated } = useApp();
 
+  // Note: We keep the check here for Public/Private split,
+  // but inside Private routes we can now use AuthGuard for finer control.
+
   if (!isAuthenticated) {
     return (
       <PublicLayout>
@@ -816,34 +817,36 @@ const AppRoutes = () => {
   }
 
   return (
-    <Layout>
-      <Routes>
-        <Route path="/" element={<CompanyDashboard />} />
-        <Route path="/projects" element={<ProjectList />} />
-        <Route path="/project/:id" element={<ProjectDashboard />} />
-        <Route path="/project/:projectId/estimate/:estimateId" element={<EstimateEditor />} />
-        <Route path="/estimates" element={<EstimatesList />} />
-        <Route path="/crm" element={<CRM />} />
-        <Route path="/directories" element={<Directories />} />
-        <Route path="/finance" element={<Finance />} />
-        <Route path="/resources" element={<Resources />} />
-        <Route path="/knowledge" element={<KnowledgeBase />} />
-        <Route path="/measurements" element={<Measurements />} />
-        <Route path="/settings" element={<Settings />} />
-        <Route path="/profile" element={<Profile />} />
-        
-        {/* Global Module Routes */}
-        <Route path="/schedule" element={<GlobalModulePage title="Графики работ" type="schedule" />} />
-        <Route path="/design" element={<GlobalModulePage title="Дизайн-проекты" type="design" />} />
-        <Route path="/supply" element={<GlobalModulePage title="Снабжение" type="supply" />} />
-        <Route path="/complectation" element={<GlobalModulePage title="Комплектация" type="complectation" />} />
-        <Route path="/docs" element={<GlobalModulePage title="Документооборот" type="docs" />} />
-        <Route path="/acts" element={<GlobalModulePage title="Акты (КС-2/КС-3)" type="acts" />} />
-        <Route path="/chats" element={<GlobalModulePage title="Чаты и Коммуникации" type="team" />} />
-        <Route path="/photos" element={<GlobalModulePage title="Фотоотчеты" type="photos" />} />
+    <AuthGuard>
+      <Layout>
+        <Routes>
+          <Route path="/" element={<CompanyDashboard />} />
+          <Route path="/projects" element={<ProjectList />} />
+          <Route path="/project/:id" element={<ProjectDashboard />} />
+          <Route path="/project/:projectId/estimate/:estimateId" element={<EstimateEditor />} />
+          <Route path="/estimates" element={<EstimatesList />} />
+          <Route path="/crm" element={<CRM />} />
+          <Route path="/directories" element={<Directories />} />
+          <Route path="/finance" element={<Finance />} />
+          <Route path="/resources" element={<Resources />} />
+          <Route path="/knowledge" element={<KnowledgeBase />} />
+          <Route path="/measurements" element={<Measurements />} />
+          <Route path="/settings" element={<Settings />} />
+          <Route path="/profile" element={<Profile />} />
 
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </Layout>
+          {/* Global Module Routes */}
+          <Route path="/schedule" element={<GlobalModulePage title="Графики работ" type="schedule" />} />
+          <Route path="/design" element={<GlobalModulePage title="Дизайн-проекты" type="design" />} />
+          <Route path="/supply" element={<GlobalModulePage title="Снабжение" type="supply" />} />
+          <Route path="/complectation" element={<GlobalModulePage title="Комплектация" type="complectation" />} />
+          <Route path="/docs" element={<GlobalModulePage title="Документооборот" type="docs" />} />
+          <Route path="/acts" element={<GlobalModulePage title="Акты (КС-2/КС-3)" type="acts" />} />
+          <Route path="/chats" element={<GlobalModulePage title="Чаты и Коммуникации" type="team" />} />
+          <Route path="/photos" element={<GlobalModulePage title="Фотоотчеты" type="photos" />} />
+
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </Layout>
+    </AuthGuard>
   );
 };
