@@ -89,6 +89,22 @@ export interface Counterparty {
 }
 
 // --- Price List (Tree Structure) ---
+export enum CalculationType {
+  FloorArea = "floor_area",
+  CeilingArea = "ceiling_area",
+  Perimeter = "perimeter",
+  WallAreaNet = "wall_area_net",
+  WallHeight = "wall_height"
+}
+
+export const CalculationTypeLabels: Record<CalculationType, string> = {
+  [CalculationType.FloorArea]: "Площадь пола",
+  [CalculationType.CeilingArea]: "Площадь потолка",
+  [CalculationType.Perimeter]: "Периметр",
+  [CalculationType.WallAreaNet]: "Площадь стен",
+  [CalculationType.WallHeight]: "Высота стен"
+};
+
 export interface PriceListCategory {
   id: string;
   name: string;
@@ -104,7 +120,7 @@ export interface PriceListItem {
   cost_price: number;
   markup: number;
   customer_price?: number; // Computed on fly usually
-  calc_types?: string[]; // New: Supported auto-calculation types
+  calc_types?: CalculationType[]; // New: Supported auto-calculation types
 }
 
 // --- Operation Templates (Tech Cards) ---
@@ -126,6 +142,7 @@ export interface OperationTemplateItem {
   markup: number;
   quantity_factor: number; // Quantity required per 1 unit of the operation template (e.g. 0.5 bags per m2)
   price_list_item_id?: string;
+  calc_types?: CalculationType[];
 }
 
 export enum ProjectStatus {
