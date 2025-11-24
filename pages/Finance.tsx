@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useApp } from '../App';
+import { useNavigate } from 'react-router-dom';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell,
   LineChart, Line, ComposedChart, Area
@@ -13,11 +14,19 @@ import {
 import { 
   Transaction, TransactionStatus, OperationType, UserRole, CashAccount, CounterpartyType, Project 
 } from '../types';
+import { 
+  convertPaymentScheduleToTransactions, 
+  groupTransactionsByDate,
+  isPaymentScheduleTransaction,
+  createEstimateLink,
+  PaymentScheduleTransaction 
+} from '../services/paymentScheduleAdapter';
 import { v4 as uuidv4 } from 'uuid';
 import { clsx } from 'clsx';
 
 export const Finance = () => {
   const { transactions, cashAccounts, financialArticles, projects, counterparties, currentUser, addTransaction, updateTransaction, estimates, estimateItems } = useApp();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'dashboard' | 'registry' | 'calendar' | 'accountable' | 'analytics'>('dashboard');
   
   const isDirector = currentUser.role === UserRole.Director || currentUser.role === UserRole.Admin;
@@ -221,7 +230,12 @@ export const Finance = () => {
 
        {/* --- CALENDAR CONTENT --- */}
        {activeTab === 'calendar' && (
-          <PaymentCalendar transactions={transactions} />
+          <PaymentCalendar 
+            transactions={transactions} 
+            estimates={estimates}
+            projects={projects}
+            navigate={navigate}
+          />
        )}
 
        {/* --- ACCOUNTABLE CONTENT --- */}
@@ -471,22 +485,76 @@ const OperationsRegistry = ({ transactions, counterparties, projects, articles, 
    );
 };
 
-const PaymentCalendar = ({ transactions }: { transactions: Transaction[] }) => {
+const PaymentCalendar = ({ 
+  transactions, 
+  estimates, 
+  projects,
+  navigate
+}: { 
+  transactions: Transaction[]; 
+  estimates: any[]; 
+  projects: any[]; 
+  navigate: any;
+}) => {
+    // Convert payment schedule to transactions
+    const paymentTransactions = useMemo(() => {
+        return convertPaymentScheduleToTransactions(estimates);
+    }, [estimates]);
+
+    // Combine all transactions
+    const allTransactions = useMemo(() => {
+        return [...transactions, ...paymentTransactions];
+    }, [transactions, paymentTransactions]);
+
     // Group by date
     const calendar = useMemo(() => {
-       const pending = transactions.filter(t => t.status === TransactionStatus.Pending || t.status === TransactionStatus.Approved);
-       const grouped = new Map<string, Transaction[]>();
+       const pending = allTransactions.filter(t => 
+           t.status === TransactionStatus.Pending || 
+           t.status === TransactionStatus.Approved
+       );
+       const grouped = new Map<string, (Transaction | PaymentScheduleTransaction)[]>();
        pending.forEach(t => {
            const list = grouped.get(t.date) || [];
            list.push(t);
            grouped.set(t.date, list);
        });
        return Array.from(grouped.entries()).sort((a, b) => a[0].localeCompare(b[0]));
-    }, [transactions]);
+    }, [allTransactions]);
+
+    // Статистика по платежам из смет
+    const paymentStats = useMemo(() => {
+        const scheduleTransactions = paymentTransactions;
+        const total = scheduleTransactions.length;
+        const pending = scheduleTransactions.filter(t => t.status === TransactionStatus.Pending).length;
+        const approved = scheduleTransactions.filter(t => t.status === TransactionStatus.Approved).length;
+        const highRisk = scheduleTransactions.filter(t => t.ai_score !== undefined && t.ai_score < 50).length;
+        
+        return { total, pending, approved, highRisk };
+    }, [paymentTransactions]);
 
     return (
        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 overflow-y-auto h-[600px]">
-          <h3 className="font-bold text-lg mb-6">Платежный календарь (Ожидаемые операции)</h3>
+          <div className="flex justify-between items-start mb-6">
+             <h3 className="font-bold text-lg">Платежный календарь (Ожидаемые операции)</h3>
+             
+             {/* Статистика по платежам из смет */}
+             {paymentStats.total > 0 && (
+                <div className="flex items-center gap-4 text-sm">
+                   <div className="flex items-center gap-1">
+                      <div className="w-2 h-2 rounded-full bg-purple-500"></div>
+                      <span className="text-slate-600">График платежей:</span>
+                      <span className="font-medium">{paymentStats.total}</span>
+                   </div>
+                   {paymentStats.highRisk > 0 && (
+                      <div className="flex items-center gap-1 text-red-600">
+                         <span>⚠️</span>
+                         <span>Высокий риск: {paymentStats.highRisk}</span>
+                      </div>
+                   )}
+                </div>
+             )}
+          </div>
+          
           <div className="space-y-6">
              {calendar.length === 0 && <div className="text-slate-400 text-center">Нет запланированных платежей</div>}
              {calendar.map(([date, items]) => (
@@ -494,17 +562,120 @@ const PaymentCalendar = ({ transactions }: { transactions: Transaction[] }) => {
                    <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-blue-500 border-2 border-white shadow-sm"></div>
                    <h4 className="font-bold text-slate-800 mb-2">{new Date(date).toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long' })}</h4>
                    <div className="space-y-2">
-                      {items.map(t => (
-                         <div key={t.id} className="bg-slate-50 p-3 rounded-lg border border-slate-100 flex justify-between items-center">
-                            <div>
-                               <div className="text-sm font-medium">{t.description || t.operation_type}</div>
-                               <div className="text-xs text-slate-500">{t.operation_type === OperationType.Income ? 'Поступление' : 'Списание'}</div>
+                      {items.map(t => {
+                         const isPaymentSchedule = isPaymentScheduleTransaction(t);
+                         const project = projects.find(p => p.id === t.project_id);
+                         
+                         return (
+                            <div 
+                               key={t.id} 
+                               className={`p-3 rounded-lg border flex justify-between items-center ${
+                                  isPaymentSchedule 
+                                     ? 'bg-purple-50 border-purple-200' 
+                                     : 'bg-slate-50 border-slate-100'
+                               }`}
+                            >
+                               <div className="flex-1">
+                                  <div className="flex items-center gap-2 mb-1">
+                                     <div className="text-sm font-medium">
+                                        {t.description || t.operation_type}
+                                     </div>
+                                     
+                                     {/* Индикатор источника */}
+                                     {isPaymentSchedule && (
+                                        <span className="px-2 py-0.5 bg-purple-100 text-purple-700 text-xs rounded-full font-medium">
+                                           График платежей
+                                        </span>
+                                     )}
+                                     
+                                     {/* AI индикатор для платежей из смет */}
+                                     {isPaymentSchedule && t.ai_score !== undefined && (
+                                        <div className="flex items-center gap-1">
+                                           <div className={`w-2 h-2 rounded-full ${
+                                              t.ai_score >= 75 ? 'bg-green-500' : 
+                                              t.ai_score >= 50 ? 'bg-yellow-500' : 'bg-red-500'
+                                           }`} />
+                                           <span className={`text-xs font-medium ${
+                                              t.ai_score >= 75 ? 'text-green-600' : 
+                                              t.ai_score >= 50 ? 'text-yellow-600' : 'text-red-600'
+                                           }`}>
+                                              AI {t.ai_score}/100
+                                           </span>
+                                        </div>
+                                     )}
+                                  </div>
+                                  
+                                  <div className="flex items-center gap-2 text-xs text-slate-500">
+                                     <span>{t.operation_type === OperationType.Income ? 'Поступление' : 'Списание'}</span>
+                                     
+                                     {/* Название проекта */}
+                                     {project && (
+                                        <>
+                                           <span>•</span>
+                                           <span>{project.name}</span>
+                                        </>
+                                     )}
+                                     
+                                     {/* Процент платежа для графиков */}
+                                     {isPaymentSchedule && (
+                                        <>
+                                           <span>•</span>
+                                           <span>{t.payment_percent}%</span>
+                                        </>
+                                     )}
+                                  </div>
+                                  
+                                  {/* AI риски для платежей из смет */}
+                                  {isPaymentSchedule && t.ai_risk_factors && t.ai_risk_factors.length > 0 && (
+                                     <div className="mt-1 flex flex-wrap gap-1">
+                                        {t.ai_risk_factors.slice(0, 2).map((risk, i) => (
+                                           <span key={i} className="px-1.5 py-0.5 bg-red-50 text-red-700 text-xs rounded">
+                                              ⚠️ {risk}
+                                           </span>
+                                        ))}
+                                        {t.ai_risk_factors.length > 2 && (
+                                           <span className="px-1.5 py-0.5 bg-red-50 text-red-700 text-xs rounded">
+                                              +{t.ai_risk_factors.length - 2}
+                                           </span>
+                                        )}
+                                     </div>
+                                  )}
+                               </div>
+                               
+                               <div className="flex items-center gap-2">
+                                  {/* Сумма */}
+                                  <span className={`font-bold ${
+                                     t.operation_type === OperationType.Income ? 'text-green-600' : 'text-red-600'
+                                  }`}>
+                                     {t.operation_type === OperationType.Income ? '+' : '-'}{t.amount.toLocaleString()} ₽
+                                  </span>
+                                  
+                                  {/* Кнопка перехода к смете */}
+                                  {isPaymentSchedule && (
+                                     <button
+                                        onClick={() => {
+                                           const link = `/project/${t.project_id}/estimate/${t.estimate_id}`;
+                                           navigate(link);
+                                        }}
+                                        className="p-1 text-purple-600 hover:bg-purple-100 rounded"
+                                        title="Перейти к смете"
+                                     >
+                                        <Calendar size={14} />
+                                     </button>
+                                  )}
+                                  
+                                  {/* Статус */}
+                                  <div className={`px-2 py-1 rounded text-xs font-medium ${
+                                     t.status === TransactionStatus.Approved 
+                                        ? 'bg-green-100 text-green-700' 
+                                        : 'bg-yellow-100 text-yellow-700'
+                                  }`}>
+                                     {t.status === TransactionStatus.Approved ? 'Одобрено' : 'Ожидает'}
+                                  </div>
+                               </div>
                             </div>
-                            <span className={`font-bold ${t.operation_type === OperationType.Income ? 'text-green-600' : 'text-red-600'}`}>
-                               {t.operation_type === OperationType.Income ? '+' : '-'}{t.amount.toLocaleString()} ₽
-                            </span>
-                         </div>
-                      ))}
+                         );
+                      })}
                    </div>
                 </div>
              ))}
