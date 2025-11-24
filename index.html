@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Строй-Контроль</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      /* Custom Scrollbar for tables */
+      ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+      }
+      ::-webkit-scrollbar-track {
+        background: #f1f5f9;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 4px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: #94a3b8;
+      }
+
+      /* Force inputs to be readable regardless of browser theme */
+      input, select, textarea {
+        background-color: #ffffff !important;
+        color: #0f172a !important; /* slate-900 */
+        border-color: #cbd5e1; /* slate-300 default */
+      }
+      
+      /* Fix checkbox specific issue - Force White Background */
+      input[type="checkbox"] {
+        appearance: none;
+        -webkit-appearance: none;
+        background-color: #ffffff !important;
+        border: 1px solid #cbd5e1 !important;
+        width: 1rem;
+        height: 1rem;
+        border-radius: 0.25rem;
+        display: inline-grid;
+        place-content: center;
+        cursor: pointer;
+        margin: 0;
+      }
+
+      input[type="checkbox"]::before {
+        content: "";
+        width: 0.65em;
+        height: 0.65em;
+        transform: scale(0);
+        transition: 120ms transform ease-in-out;
+        box-shadow: inset 1em 1em white;
+        background-color: white;
+        transform-origin: center;
+        clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%);
+      }
+
+      input[type="checkbox"]:checked {
+        background-color: #2563eb !important;
+        border-color: #2563eb !important;
+      }
+
+      input[type="checkbox"]:checked::before {
+        transform: scale(1);
+      }
+      
+      input::placeholder, textarea::placeholder {
+        color: #94a3b8 !important; /* slate-400 */
+      }
+
+      /* Ensure dark mode browsers don't override this */
+      @media (prefers-color-scheme: dark) {
+        input, select, textarea {
+          background-color: #ffffff !important;
+          color: #0f172a !important;
+        }
+        input[type="checkbox"] {
+           background-color: #ffffff !important;
+        }
+      }
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "lucide-react": "https://aistudiocdn.com/lucide-react@^0.554.0",
+    "react/": "https://aistudiocdn.com/react@^19.2.0/",
+    "react": "https://aistudiocdn.com/react@^19.2.0",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
+    "recharts": "https://aistudiocdn.com/recharts@^3.4.1",
+    "react-router-dom": "https://aistudiocdn.com/react-router-dom@^7.9.6",
+    "uuid": "https://aistudiocdn.com/uuid@^13.0.0",
+    "clsx": "https://aistudiocdn.com/clsx@^2.1.1",
+    "@google/genai": "https://aistudiocdn.com/@google/genai@^1.30.0",
+    "pdfjs-dist": "https://aistudiocdn.com/pdfjs-dist@^3.11.174"
+  }
+}
+</script>
+<link rel="stylesheet" href="/index.css">
+</head>
+  <body class="bg-slate-50 text-slate-900 antialiased">
+    <div id="root"></div>
+  <script type="module" src="/index.tsx"></script>
+</body>
+</html>
