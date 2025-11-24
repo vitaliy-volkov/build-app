@@ -718,6 +718,23 @@ export interface MeasurementOpening {
   wallIndex: number; // Index of the starting point of the wall segment in the room points array
 }
 
+// Auto Rectangle Mode Types
+export interface AutoRectOpening {
+  id: string;
+  type: 'Window' | 'Door' | 'Empty';
+  width: number; // mm
+  height: number; // mm
+  depth?: number; // mm (wall thickness)
+  distanceFromFloor?: number; // mm
+}
+
+export interface AutoRectData {
+  length: number; // mm
+  width: number; // mm
+  height: number; // mm
+  openings: AutoRectOpening[];
+}
+
 // Manual Mode Types
 export interface ManualOpening {
   id: string;
@@ -752,8 +769,11 @@ export interface MeasurementRoom {
   openings: MeasurementOpening[]; // Openings (Drawing Mode)
   
   // Mode Toggle
-  mode: 'drawing' | 'manual';
+  mode: 'drawing' | 'manual' | 'auto_rect';
   
+  // Auto Rect Data
+  autoRectData?: AutoRectData;
+
   // Manual Override Stats
   manualStats?: ManualMeasurementStats;
   
