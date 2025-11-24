@@ -10,7 +10,7 @@ import {
   DesignFile, SpecificationItem, ProjectTask, ChatMessage, PhotoStreamPost,
   CashAccount, FinancialArticle, Transaction, TransactionStatus, OperationType,
   Lead, LeadStatus, ProjectTemplate, OperationTemplate, OperationTemplateItem,
-  CompanySettings, AIConfiguration, MeasurementProject
+  CompanySettings, AIConfiguration, MeasurementProject, CalculationType
 } from '../types';
 
 // --- Users (Auth Simulation) ---
@@ -143,6 +143,7 @@ export const MOCK_PRICE_ITEMS: PriceListItem[] = [
   { id: 'pli-2', category_id: 'cat-1-1', name: 'Вязка арматуры', unit: 'т', cost_price: 15000, markup: 25 },
   { id: 'pli-3', category_id: 'cat-2-1', name: 'Песок речной', unit: 'м3', cost_price: 800, markup: 10 },
   { id: 'pli-4', category_id: 'cat-2-1', name: 'Щебень гранитный 20-40', unit: 'м3', cost_price: 2200, markup: 10 },
+  { id: 'pli-5', category_id: 'cat-1-1', name: 'Грунтовка пола', unit: 'м2', cost_price: 50, markup: 30, calc_types: [CalculationType.FloorArea] },
 ];
 
 // --- Operation Templates ---
@@ -156,10 +157,10 @@ export const MOCK_OPERATION_TEMPLATE_ITEMS: OperationTemplateItem[] = [
   { id: 'opt-i-1', template_id: 'opt-1', resource_type: ResourceType.Material, name: 'Грунтовка глубокого проникновения', unit: 'л', quantity_factor: 0.2, cost_price: 150, markup: 10 },
   { id: 'opt-i-2', template_id: 'opt-1', resource_type: ResourceType.Material, name: 'Штукатурка гипсовая (30кг)', unit: 'шт', quantity_factor: 0.45, cost_price: 450, markup: 15 },
   { id: 'opt-i-3', template_id: 'opt-1', resource_type: ResourceType.Material, name: 'Маяк штукатурный 6мм', unit: 'шт', quantity_factor: 0.5, cost_price: 30, markup: 20 },
-  { id: 'opt-i-4', template_id: 'opt-1', resource_type: ResourceType.Work, name: 'Оштукатуривание стен по маякам', unit: 'м2', quantity_factor: 1, cost_price: 600, markup: 30 },
+  { id: 'opt-i-4', template_id: 'opt-1', resource_type: ResourceType.Work, name: 'Оштукатуривание стен по маякам', unit: 'м2', quantity_factor: 1, cost_price: 600, markup: 30, calc_types: [CalculationType.WallAreaNet] },
   // For Screed (opt-2)
   { id: 'opt-i-5', template_id: 'opt-2', resource_type: ResourceType.Material, name: 'Пескобетон М300 (40кг)', unit: 'шт', quantity_factor: 2.5, cost_price: 300, markup: 15 },
-  { id: 'opt-i-6', template_id: 'opt-2', resource_type: ResourceType.Work, name: 'Устройство стяжки', unit: 'м2', quantity_factor: 1, cost_price: 500, markup: 25 },
+  { id: 'opt-i-6', template_id: 'opt-2', resource_type: ResourceType.Work, name: 'Устройство стяжки', unit: 'м2', quantity_factor: 1, cost_price: 500, markup: 25, calc_types: [CalculationType.FloorArea] },
 ];
 
 // --- Projects ---

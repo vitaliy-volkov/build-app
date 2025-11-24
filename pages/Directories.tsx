@@ -5,9 +5,9 @@ import {
   User, Briefcase, Phone, Mail, Folder, File, 
   ChevronRight, ChevronDown, Plus, Edit2, Trash2, X, 
   FolderPlus, FilePlus, Search, Lock, Wallet, Landmark, TrendingUp, TrendingDown,
-  Layers, BookOpen, ArrowRight
+  Layers, BookOpen, ArrowRight, CheckSquare, Square
 } from 'lucide-react';
-import { CounterpartyType, PriceListCategory, PriceListItem, UserRole, Transaction, TransactionStatus, OperationType, FinancialArticle, OperationTemplate, OperationTemplateItem, ResourceType } from '../types';
+import { CounterpartyType, PriceListCategory, PriceListItem, UserRole, Transaction, TransactionStatus, OperationType, FinancialArticle, OperationTemplate, OperationTemplateItem, ResourceType, CalculationType, CalculationTypeLabels } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 import { clsx } from 'clsx';
 
@@ -301,8 +301,19 @@ export const Directories = () => {
                               <tbody className="divide-y divide-slate-100">
                                  {operationTemplateItems.filter(i => i.template_id === selectedTemplateId).map(item => (
                                     <tr key={item.id} className="hover:bg-slate-50 group">
-                                       <td className="p-3 pl-6 font-medium text-slate-800">{item.name}</td>
-                                       <td className="p-3 text-center">
+                                      <td className="p-3 pl-6 font-medium text-slate-800">
+                                           {item.name}
+                                           {item.calc_types && item.calc_types.length > 0 && (
+                                               <div className="flex space-x-1 mt-1">
+                                                   {item.calc_types.map((t: CalculationType) => (
+                                                       <span key={t} className="bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded text-[10px] font-normal">
+                                                           {CalculationTypeLabels[t]}
+                                                       </span>
+                                                   ))}
+                                               </div>
+                                           )}
+                                      </td>
+                                      <td className="p-3 text-center">
                                           <span className={clsx("px-2 py-0.5 rounded text-[10px] uppercase font-bold", item.resource_type === ResourceType.Work ? "bg-blue-100 text-blue-700" : "bg-green-100 text-green-700")}>
                                              {item.resource_type === ResourceType.Work ? "Работа" : "Материал"}
                                           </span>
@@ -663,9 +674,18 @@ const PriceListTreeEditor = ({
                    <File size={14} className="text-slate-400 flex-shrink-0" />
                    <div className="truncate">
                      <div className="text-sm font-medium text-slate-700 truncate">{item.name}</div>
-                     <div className="text-xs text-slate-400 flex space-x-3">
+                     <div className="text-xs text-slate-400 flex flex-wrap gap-2 items-center mt-1">
                         <span>Себест: <span className="font-semibold text-slate-600">{item.cost_price} ₽</span></span>
                         <span>Ед: {item.unit}</span>
+                        {item.calc_types && item.calc_types.length > 0 && (
+                          <div className="flex space-x-1">
+                            {item.calc_types.map((t: CalculationType) => (
+                                <span key={t} className="bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded text-[10px]">
+                                    {CalculationTypeLabels[t]}
+                                </span>
+                            ))}
+                          </div>
+                        )}
                      </div>
                    </div>
                 </div>
@@ -712,7 +732,23 @@ const CategoryModal = ({ isOpen, editingCategory, parentId, onClose, onSave }: a
 };
 
 const ItemModal = ({ isOpen, editingItem, categoryId, onClose, onSave }: any) => {
-  const [form, setForm] = useState({ name: editingItem?.name || '', unit: editingItem?.unit || 'шт', cost_price: editingItem?.cost_price || 0, markup: editingItem?.markup || 20 });
+  const [form, setForm] = useState({ 
+      name: editingItem?.name || '', 
+      unit: editingItem?.unit || 'шт', 
+      cost_price: editingItem?.cost_price || 0, 
+      markup: editingItem?.markup || 20,
+      calc_types: editingItem?.calc_types || []
+  });
+
+  const toggleCalcType = (type: CalculationType) => {
+      const current = form.calc_types || [];
+      if (current.includes(type)) {
+          setForm({ ...form, calc_types: current.filter((t: CalculationType) => t !== type) });
+      } else {
+          setForm({ ...form, calc_types: [...current, type] });
+      }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onSave({ id: editingItem?.id || uuidv4(), category_id: categoryId || editingItem?.category_id, ...form });
@@ -731,6 +767,31 @@ const ItemModal = ({ isOpen, editingItem, categoryId, onClose, onSave }: any) =>
                <div><label className="block text-sm font-medium text-slate-700 mb-1">Себестоимость (₽)</label><input type="number" value={form.cost_price} onChange={(e) => setForm({...form, cost_price: Number(e.target.value)})} className="w-full p-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" required /></div>
             </div>
             <div><label className="block text-sm font-medium text-slate-700 mb-1">Наценка (%)</label><input type="number" value={form.markup} onChange={(e) => setForm({...form, markup: Number(e.target.value)})} className="w-full p-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" required /></div>
+            
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">Авто-расчет из замеров</label>
+              <div className="grid grid-cols-2 gap-2">
+                 {Object.entries(CalculationTypeLabels).map(([type, label]) => (
+                     <div 
+                        key={type} 
+                        onClick={() => toggleCalcType(type as CalculationType)}
+                        className={clsx(
+                            "flex items-center p-2 rounded border cursor-pointer text-xs transition-colors",
+                            (form.calc_types || []).includes(type as CalculationType) 
+                                ? "bg-blue-50 border-blue-200 text-blue-700" 
+                                : "bg-slate-50 border-transparent text-slate-600 hover:bg-slate-100"
+                        )}
+                     >
+                        {(form.calc_types || []).includes(type as CalculationType) 
+                            ? <CheckSquare size={14} className="mr-2 text-blue-600"/> 
+                            : <Square size={14} className="mr-2 text-slate-400"/>
+                        }
+                        {label}
+                     </div>
+                 ))}
+              </div>
+           </div>
+
             <div className="flex space-x-2 pt-4">
                <button type="button" onClick={onClose} className="flex-1 py-2 text-slate-600 hover:bg-slate-100 rounded-lg">Отмена</button>
                <button type="submit" className="flex-1 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-lg">Сохранить</button>
@@ -789,8 +850,18 @@ const OperationTemplateItemModal = ({ isOpen, editing, templateId, template, cat
       quantity_factor: editing?.quantity_factor || 1,
       cost_price: editing?.cost_price || 0,
       markup: editing?.markup || 20,
-      price_list_item_id: editing?.price_list_item_id
+      price_list_item_id: editing?.price_list_item_id,
+      calc_types: editing?.calc_types || []
    });
+
+   const toggleCalcType = (type: CalculationType) => {
+      const current = form.calc_types || [];
+      if (current.includes(type)) {
+          setForm({ ...form, calc_types: current.filter((t: CalculationType) => t !== type) });
+      } else {
+          setForm({ ...form, calc_types: [...current, type] });
+      }
+   };
 
    const [isPickerOpen, setPickerOpen] = useState(false);
 
@@ -802,6 +873,7 @@ const OperationTemplateItemModal = ({ isOpen, editing, templateId, template, cat
          cost_price: item.cost_price,
          markup: item.markup,
          price_list_item_id: item.id,
+         calc_types: item.calc_types || []
          // Auto-detect resource type based on category if possible, or default
          // Here we assume Material by default if not specified, user can change
       });
@@ -854,6 +926,31 @@ const OperationTemplateItemModal = ({ isOpen, editing, templateId, template, cat
                   <input className="p-2 border rounded" type="number" placeholder="Базовая цена" value={form.cost_price} onChange={e => setForm({...form, cost_price: Number(e.target.value)})} />
                   <input className="p-2 border rounded" type="number" placeholder="Наценка %" value={form.markup} onChange={e => setForm({...form, markup: Number(e.target.value)})} />
                </div>
+
+               <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Авто-расчет из замеров</label>
+                  <div className="grid grid-cols-2 gap-2">
+                     {Object.entries(CalculationTypeLabels).map(([type, label]) => (
+                         <div 
+                            key={type} 
+                            onClick={() => toggleCalcType(type as CalculationType)}
+                            className={clsx(
+                                "flex items-center p-2 rounded border cursor-pointer text-xs transition-colors",
+                                (form.calc_types || []).includes(type as CalculationType) 
+                                    ? "bg-blue-50 border-blue-200 text-blue-700" 
+                                    : "bg-slate-50 border-transparent text-slate-600 hover:bg-slate-100"
+                            )}
+                         >
+                            {(form.calc_types || []).includes(type as CalculationType) 
+                                ? <CheckSquare size={14} className="mr-2 text-blue-600"/> 
+                                : <Square size={14} className="mr-2 text-slate-400"/>
+                            }
+                            {label}
+                         </div>
+                     ))}
+                  </div>
+               </div>
+
                <div className="flex space-x-2 pt-2">
                   <button onClick={onClose} className="flex-1 py-2 bg-slate-100 rounded">Отмена</button>
                   <button onClick={() => onSave({ id: editing?.id || uuidv4(), template_id: templateId || editing?.template_id, ...form })} className="flex-1 py-2 bg-blue-600 text-white rounded">Сохранить</button>
