@@ -2,6 +2,7 @@
 import React, { useState, useRef } from 'react';
 import { useApp } from '../App';
 import { UserRole, User, CompanySettings, AIConfiguration, AIProviderConfig, AITaskType, LLMProvider, DesignStyleConfig } from '../types';
+import { AIPaymentConfig, defaultAIPaymentConfig, ConfigValidator } from '../config/aiPaymentPrompts';
 import { 
   Users, Shield, Search, Edit2, Lock, Unlock, 
   Building2, Save, Sparkles, Key, Server, MessageSquare, Brain, BarChart,
@@ -13,7 +14,7 @@ import { v4 as uuidv4 } from 'uuid';
 export const Settings = () => {
   const { updateUser, currentUser, companySettings, updateCompanySettings, aiConfig, updateAIConfig } = useApp();
   const isAdmin = currentUser.role === UserRole.Admin || currentUser.role === UserRole.Director;
-  const [activeTab, setActiveTab] = useState<'general' | 'users' | 'ai'>('general');
+  const [activeTab, setActiveTab] = useState<'general' | 'users' | 'ai' | 'aiPayments'>('general');
 
   if (!isAdmin) {
     return (
@@ -34,6 +35,7 @@ export const Settings = () => {
          <TabButton label="Общие" icon={Building2} active={activeTab === 'general'} onClick={() => setActiveTab('general')} />
          <TabButton label="Пользователи" icon={Users} active={activeTab === 'users'} onClick={() => setActiveTab('users')} />
          <TabButton label="AI и Интеграции" icon={Sparkles} active={activeTab === 'ai'} onClick={() => setActiveTab('ai')} />
+         <TabButton label="AI Платежи" icon={Brain} active={activeTab === 'aiPayments'} onClick={() => setActiveTab('aiPayments')} />
       </div>
 
       {/* Content */}
@@ -46,6 +48,9 @@ export const Settings = () => {
          )}
          {activeTab === 'ai' && (
             <AISettings config={aiConfig} onSave={updateAIConfig} />
+         )}
+         {activeTab === 'aiPayments' && (
+            <AIPaymentSettings />
          )}
       </div>
     </div>
@@ -916,6 +921,300 @@ const AddProviderModal = ({ onClose, onSave }: { onClose: () => void, onSave: (p
             </div>
         </div>
     );
+};
+
+// --- 4. AI Payment Settings ---
+const AIPaymentSettings = () => {
+  const [config, setConfig] = useState<AIPaymentConfig>(defaultAIPaymentConfig);
+  const [activePromptTab, setActivePromptTab] = useState<'validation' | 'risk' | 'recommendations' | 'forecast'>('validation');
+  const [validationErrors, setValidationErrors] = useState<string[]>([]);
+  const [testResults, setTestResults] = useState<any>(null);
+  const [isTesting, setIsTesting] = useState(false);
+
+  // Валидация конфигурации
+  const validateConfig = () => {
+    const validation = ConfigValidator.validate(config);
+    setValidationErrors(validation.errors);
+    return validation.isValid;
+  };
+
+  // Тестирование промтов
+  const testPrompt = async (promptType: string) => {
+    setIsTesting(true);
+    try {
+      // TODO: Реализовать тестирование промтов
+      setTestResults({
+        type: promptType,
+        success: true,
+        response: 'Test response',
+        latency: 1.2
+      });
+    } catch (error) {
+      setTestResults({
+        type: promptType,
+        success: false,
+        error: 'Test failed'
+      });
+    } finally {
+      setIsTesting(false);
+    }
+  };
+
+  // Сохранение конфигурации
+  const handleSave = () => {
+    if (validateConfig()) {
+      // TODO: Сохранить в localStorage или на сервер
+      console.log('Saving AI payment config:', config);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+        <h3 className="text-lg font-bold text-slate-800 mb-2 flex items-center">
+          <Brain size={20} className="mr-2 text-purple-600" />
+          AI Настройки платежей
+        </h3>
+        <p className="text-sm text-slate-500 mb-6">
+          Экспертная настройка AI для анализа и управления платежами в строительной компании
+        </p>
+
+        {/* Общие настройки */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between p-4 bg-slate-50 rounded-lg">
+            <div>
+              <h4 className="font-medium text-slate-800">Включить AI для платежей</h4>
+              <p className="text-sm text-slate-500">Анализ рисков, рекомендации, прогнозирование</p>
+            </div>
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                className="sr-only peer"
+                checked={config.enabled}
+                onChange={(e) => setConfig(prev => ({ ...prev, enabled: e.target.checked }))}
+              />
+              <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+            </label>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">AI Модель</label>
+              <select
+                className="w-full p-2 border border-slate-300 rounded-lg"
+                value={config.model}
+                onChange={(e) => setConfig(prev => ({ ...prev, model: e.target.value }))}
+              >
+                <option value="gemini-1.5-flash">Gemini 1.5 Flash</option>
+                <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>
+                <option value="gpt-4o-mini">GPT-4o Mini</option>
+                <option value="gpt-4o">GPT-4o</option>
+                <option value="claude-3-haiku">Claude 3 Haiku</option>
+                <option value="claude-3-sonnet">Claude 3 Sonnet</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Temperature</label>
+              <input
+                type="number"
+                className="w-full p-2 border border-slate-300 rounded-lg"
+                value={config.temperature}
+                onChange={(e) => setConfig(prev => ({ ...prev, temperature: Number(e.target.value) }))}
+                min="0"
+                max="1"
+                step="0.1"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Max Tokens</label>
+              <input
+                type="number"
+                className="w-full p-2 border border-slate-300 rounded-lg"
+                value={config.maxTokens}
+                onChange={(e) => setConfig(prev => ({ ...prev, maxTokens: Number(e.target.value) }))}
+                min="100"
+                max="8000"
+                step="100"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Пороги рисков */}
+        <div className="mt-6">
+          <h4 className="font-medium text-slate-800 mb-4">Пороги рисков</h4>
+          <div className="grid grid-cols-4 gap-4">
+            {Object.entries(config.validation.riskThresholds).map(([level, value]) => (
+              <div key={level} className="text-center">
+                <label className="block text-sm font-medium text-slate-700 mb-1 capitalize">
+                  {level === 'low' ? 'Низкий' : level === 'medium' ? 'Средний' : level === 'high' ? 'Высокий' : 'Критический'}
+                </label>
+                <input
+                  type="number"
+                  className="w-full p-2 border border-slate-300 rounded-lg text-center"
+                  value={value}
+                  onChange={(e) => setConfig(prev => ({
+                    ...prev,
+                    validation: {
+                      ...prev.validation,
+                      riskThresholds: {
+                        ...prev.validation.riskThresholds,
+                        [level]: Number(e.target.value)
+                      }
+                    }
+                  }))}
+                  min="0"
+                  max="100"
+                />
+                <div className="text-xs text-slate-500 mt-1">0-{value}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Бизнес-правила */}
+        <div className="mt-6">
+          <h4 className="font-medium text-slate-800 mb-4">Лимиты по ролям</h4>
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+            {Object.entries(config.businessRules.roleLimits).map(([role, limit]) => (
+              <div key={role}>
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  {role === 'Director' ? 'Директор' :
+                   role === 'ProjectManager' ? 'Рук. проекта' :
+                   role === 'Foreman' ? 'Прораб' :
+                   role === 'Estimator' ? 'Сметчик' : 'Снабженец'}
+                </label>
+                <input
+                  type="number"
+                  className="w-full p-2 border border-slate-300 rounded-lg"
+                  value={limit}
+                  onChange={(e) => setConfig(prev => ({
+                    ...prev,
+                    businessRules: {
+                      ...prev.businessRules,
+                      roleLimits: {
+                        ...prev.businessRules.roleLimits,
+                        [role]: Number(e.target.value)
+                      }
+                    }
+                  }))}
+                  min="0"
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Промты */}
+        <div className="mt-6">
+          <h4 className="font-medium text-slate-800 mb-4">Системные промты</h4>
+          <div className="border border-slate-200 rounded-lg">
+            <div className="flex border-b border-slate-200">
+              {[
+                { id: 'validation', label: 'Валидация' },
+                { id: 'risk', label: 'Анализ рисков' },
+                { id: 'recommendations', label: 'Рекомендации' },
+                { id: 'forecast', label: 'Прогноз' }
+              ].map(tab => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActivePromptTab(tab.id as any)}
+                  className={`flex-1 px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                    activePromptTab === tab.id
+                      ? 'border-purple-500 text-purple-600'
+                      : 'border-transparent text-slate-500 hover:text-slate-700'
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+
+            <div className="p-4">
+              <textarea
+                className="w-full h-32 p-3 border border-slate-300 rounded-lg font-mono text-sm"
+                value={config.prompts[`payment${activePromptTab === 'validation' ? 'Validation' : 
+                                                      activePromptTab === 'risk' ? 'RiskAnalysis' :
+                                                      activePromptTab === 'recommendations' ? 'OptimizationRecommendations' :
+                                                      'CashFlowForecast'}`] || ''}
+                onChange={(e) => {
+                  const promptKey = `payment${activePromptTab === 'validation' ? 'Validation' : 
+                                              activePromptTab === 'risk' ? 'RiskAnalysis' :
+                                              activePromptTab === 'recommendations' ? 'OptimizationRecommendations' :
+                                              'CashFlowForecast'}` as keyof typeof config.prompts;
+                  setConfig(prev => ({
+                    ...prev,
+                    prompts: {
+                      ...prev.prompts,
+                      [promptKey]: e.target.value
+                    }
+                  }));
+                }}
+                placeholder="Введите системный промт..."
+              />
+              
+              <div className="flex justify-between items-center mt-2">
+                <div className="text-xs text-slate-500">
+                  Используйте {`{параметр}`} для подстановки значений
+                </div>
+                <button
+                  onClick={() => testPrompt(activePromptTab)}
+                  disabled={isTesting}
+                  className="px-3 py-1 bg-purple-600 text-white text-sm rounded hover:bg-purple-700 disabled:opacity-50"
+                >
+                  {isTesting ? 'Тест...' : 'Тестировать'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Результаты теста */}
+        {testResults && (
+          <div className="mt-4 p-4 bg-slate-50 rounded-lg">
+            <h5 className="font-medium text-slate-800 mb-2">Результаты теста</h5>
+            {testResults.success ? (
+              <div className="text-sm text-green-600">
+                ✅ Успешно • {testResults.latency}s
+              </div>
+            ) : (
+              <div className="text-sm text-red-600">
+                ❌ Ошибка: {testResults.error}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Ошибки валидации */}
+        {validationErrors.length > 0 && (
+          <div className="mt-4 p-4 bg-red-50 rounded-lg">
+            <h5 className="font-medium text-red-800 mb-2">Ошибки конфигурации</h5>
+            {validationErrors.map((error, i) => (
+              <div key={i} className="text-sm text-red-700">• {error}</div>
+            ))}
+          </div>
+        )}
+
+        {/* Кнопки действий */}
+        <div className="flex justify-between mt-6">
+          <button
+            onClick={() => setConfig(defaultAIPaymentConfig)}
+            className="px-4 py-2 bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200"
+          >
+            Сбросить
+          </button>
+          <button
+            onClick={handleSave}
+            className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+          >
+            Сохранить настройки
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 };
 
 const TabButton = ({ label, icon: Icon, active, onClick }: any) => (

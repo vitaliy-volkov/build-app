@@ -25,6 +25,7 @@ import { QuickPaymentModal } from '../components/QuickPaymentModal';
 import { AccountabilityModal } from '../components/AccountabilityModal';
 import { PlanPaymentModal } from '../components/PlanPaymentModal';
 import { PaymentAnalyticsDashboard } from '../components/PaymentAnalyticsDashboard';
+import { PaymentManagementModal } from '../components/PaymentManagementModal';
 import { v4 as uuidv4 } from 'uuid';
 import { clsx } from 'clsx';
 
@@ -34,10 +35,9 @@ export const Finance = () => {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'registry' | 'calendar' | 'accountable' | 'analytics'>('dashboard');
   
   // Global state for payment modals
-  const [showQuickPaymentModal, setShowQuickPaymentModal] = useState(false);
+  const [showPaymentManagementModal, setShowPaymentManagementModal] = useState(false);
   const [paymentModalType, setPaymentModalType] = useState<'income' | 'expense'>('income');
   const [showAccountabilityModal, setShowAccountabilityModal] = useState(false);
-  const [showPlanPaymentModal, setShowPlanPaymentModal] = useState(false);
   const [showAnalyticsModal, setShowAnalyticsModal] = useState(false);
   
   const isDirector = currentUser.role === UserRole.Director || currentUser.role === UserRole.Admin;
@@ -523,10 +523,9 @@ const PaymentCalendar = ({
   financialArticles: any[];
 }) => {
     // State for modals
-    const [showQuickPaymentModal, setShowQuickPaymentModal] = useState(false);
+    const [showPaymentManagementModal, setShowPaymentManagementModal] = useState(false);
     const [paymentModalType, setPaymentModalType] = useState<'income' | 'expense'>('income');
     const [showAccountabilityModal, setShowAccountabilityModal] = useState(false);
-    const [showPlanPaymentModal, setShowPlanPaymentModal] = useState(false);
     const [showAnalyticsModal, setShowAnalyticsModal] = useState(false);
 
     // Convert payment schedule to transactions
@@ -594,7 +593,7 @@ const PaymentCalendar = ({
                 <button
                    onClick={() => {
                       setPaymentModalType('income');
-                      setShowQuickPaymentModal(true);
+                      setShowPaymentManagementModal(true);
                    }}
                    className="flex items-center gap-2 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm"
                 >
@@ -605,7 +604,7 @@ const PaymentCalendar = ({
                 <button
                    onClick={() => {
                       setPaymentModalType('expense');
-                      setShowQuickPaymentModal(true);
+                      setShowPaymentManagementModal(true);
                    }}
                    className="flex items-center gap-2 px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm"
                 >
@@ -614,15 +613,10 @@ const PaymentCalendar = ({
                 </button>
                 
                 <button
-                   onClick={() => setShowAccountabilityModal(true)}
-                   className="flex items-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm"
-                >
-                   <Users size={16} />
-                   Подотчетность
-                </button>
-                
-                <button
-                   onClick={() => setShowPlanPaymentModal(true)}
+                   onClick={() => {
+                      setPaymentModalType('planned');
+                      setShowPaymentManagementModal(true);
+                   }}
                    className="flex items-center gap-2 px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 text-sm"
                 >
                    <Target size={16} />
@@ -637,13 +631,7 @@ const PaymentCalendar = ({
                    Аналитика
                 </button>
                 
-                <button
-                   className="flex items-center gap-2 px-3 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 text-sm"
-                >
-                   <Zap size={16} />
-                   Быстрый ввод
-                </button>
-             </div>
+                             </div>
           </div>
           
           <div className="space-y-6">
@@ -772,15 +760,15 @@ const PaymentCalendar = ({
              ))}
           </div>
           
-          {/* Quick Payment Modal */}
-          <QuickPaymentModal
-            isOpen={showQuickPaymentModal}
-            onClose={() => setShowQuickPaymentModal(false)}
+          {/* Payment Management Modal */}
+          <PaymentManagementModal
+            isOpen={showPaymentManagementModal}
+            onClose={() => setShowPaymentManagementModal(false)}
             onSave={(transaction) => {
               addTransaction(transaction);
-              setShowQuickPaymentModal(false);
+              setShowPaymentManagementModal(false);
             }}
-            initialType={paymentModalType}
+            initialTab={paymentModalType === 'planned' ? 'planned' : paymentModalType}
             context={{
               currentUser,
               projects,
@@ -789,7 +777,7 @@ const PaymentCalendar = ({
               financialArticles,
               estimates,
               transactions,
-              aiConfig: null // TODO: Add AI config from context
+              aiConfig: null
             }}
           />
           
@@ -806,23 +794,6 @@ const PaymentCalendar = ({
               counterparties,
               cashAccounts,
               projects,
-              transactions,
-              aiConfig: null
-            }}
-          />
-          
-          {/* Plan Payment Modal */}
-          <PlanPaymentModal
-            isOpen={showPlanPaymentModal}
-            onClose={() => setShowPlanPaymentModal(false)}
-            onSave={(plannedTransaction) => {
-              addTransaction(plannedTransaction);
-              setShowPlanPaymentModal(false);
-            }}
-            context={{
-              currentUser,
-              projects,
-              cashAccounts,
               transactions,
               aiConfig: null
             }}
