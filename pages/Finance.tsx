@@ -9,7 +9,7 @@ import {
   LayoutDashboard, List, Calendar, Users, 
   TrendingUp, TrendingDown, Wallet, Filter, Plus,
   CheckCircle2, XCircle, Clock, MoreHorizontal, User, Download,
-  PieChart as PieIcon, BarChart3
+  PieChart as PieIcon, BarChart3, Zap, Target
 } from 'lucide-react';
 import { 
   Transaction, TransactionStatus, OperationType, UserRole, CashAccount, CounterpartyType, Project 
@@ -21,6 +21,10 @@ import {
   createEstimateLink,
   PaymentScheduleTransaction 
 } from '../services/paymentScheduleAdapter';
+import { QuickPaymentModal } from '../components/QuickPaymentModal';
+import { AccountabilityModal } from '../components/AccountabilityModal';
+import { PlanPaymentModal } from '../components/PlanPaymentModal';
+import { PaymentAnalyticsDashboard } from '../components/PaymentAnalyticsDashboard';
 import { v4 as uuidv4 } from 'uuid';
 import { clsx } from 'clsx';
 
@@ -28,6 +32,13 @@ export const Finance = () => {
   const { transactions, cashAccounts, financialArticles, projects, counterparties, currentUser, addTransaction, updateTransaction, estimates, estimateItems } = useApp();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'dashboard' | 'registry' | 'calendar' | 'accountable' | 'analytics'>('dashboard');
+  
+  // Global state for payment modals
+  const [showQuickPaymentModal, setShowQuickPaymentModal] = useState(false);
+  const [paymentModalType, setPaymentModalType] = useState<'income' | 'expense'>('income');
+  const [showAccountabilityModal, setShowAccountabilityModal] = useState(false);
+  const [showPlanPaymentModal, setShowPlanPaymentModal] = useState(false);
+  const [showAnalyticsModal, setShowAnalyticsModal] = useState(false);
   
   const isDirector = currentUser.role === UserRole.Director || currentUser.role === UserRole.Admin;
 
@@ -235,6 +246,11 @@ export const Finance = () => {
             estimates={estimates}
             projects={projects}
             navigate={navigate}
+            addTransaction={addTransaction}
+            currentUser={currentUser}
+            counterparties={counterparties}
+            cashAccounts={cashAccounts}
+            financialArticles={financialArticles}
           />
        )}
 
@@ -489,13 +505,30 @@ const PaymentCalendar = ({
   transactions, 
   estimates, 
   projects,
-  navigate
+  navigate,
+  addTransaction,
+  currentUser,
+  counterparties,
+  cashAccounts,
+  financialArticles
 }: { 
   transactions: Transaction[]; 
   estimates: any[]; 
   projects: any[]; 
   navigate: any;
+  addTransaction: any;
+  currentUser: any;
+  counterparties: any[];
+  cashAccounts: any[];
+  financialArticles: any[];
 }) => {
+    // State for modals
+    const [showQuickPaymentModal, setShowQuickPaymentModal] = useState(false);
+    const [paymentModalType, setPaymentModalType] = useState<'income' | 'expense'>('income');
+    const [showAccountabilityModal, setShowAccountabilityModal] = useState(false);
+    const [showPlanPaymentModal, setShowPlanPaymentModal] = useState(false);
+    const [showAnalyticsModal, setShowAnalyticsModal] = useState(false);
+
     // Convert payment schedule to transactions
     const paymentTransactions = useMemo(() => {
         return convertPaymentScheduleToTransactions(estimates);
@@ -529,30 +562,88 @@ const PaymentCalendar = ({
         const approved = scheduleTransactions.filter(t => t.status === TransactionStatus.Approved).length;
         const highRisk = scheduleTransactions.filter(t => t.ai_score !== undefined && t.ai_score < 50).length;
         
-        return { total, pending, approved, highRisk };
+        return { total, pending, approved, highRiskCount: highRisk };
     }, [paymentTransactions]);
 
     return (
        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 overflow-y-auto h-[600px]">
           <div className="flex justify-between items-start mb-6">
-             <h3 className="font-bold text-lg">Платежный календарь (Ожидаемые операции)</h3>
-             
-             {/* Статистика по платежам из смет */}
-             {paymentStats.total > 0 && (
-                <div className="flex items-center gap-4 text-sm">
-                   <div className="flex items-center gap-1">
-                      <div className="w-2 h-2 rounded-full bg-purple-500"></div>
-                      <span className="text-slate-600">График платежей:</span>
-                      <span className="font-medium">{paymentStats.total}</span>
-                   </div>
-                   {paymentStats.highRisk > 0 && (
-                      <div className="flex items-center gap-1 text-red-600">
-                         <span>⚠️</span>
-                         <span>Высокий риск: {paymentStats.highRisk}</span>
+             <div>
+                <h3 className="font-bold text-lg">Платежный календарь (Ожидаемые операции)</h3>
+                
+                {/* Статистика по платежам из смет */}
+                {paymentStats.total > 0 && (
+                   <div className="flex items-center gap-4 text-sm mt-2">
+                      <div className="flex items-center gap-1">
+                         <div className="w-2 h-2 rounded-full bg-purple-500"></div>
+                         <span className="text-slate-600">График платежей:</span>
+                         <span className="font-medium">{paymentStats.total}</span>
                       </div>
-                   )}
-                </div>
-             )}
+                      {paymentStats.highRiskCount > 0 && (
+                         <div className="flex items-center gap-1 text-red-600">
+                            <span>⚠️</span>
+                            <span>Высокий риск: {paymentStats.highRiskCount}</span>
+                         </div>
+                      )}
+                   </div>
+                )}
+             </div>
+             
+             {/* Панель инструментов */}
+             <div className="flex gap-2 flex-wrap">
+                <button
+                   onClick={() => {
+                      setPaymentModalType('income');
+                      setShowQuickPaymentModal(true);
+                   }}
+                   className="flex items-center gap-2 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm"
+                >
+                   <TrendingUp size={16} />
+                   Поступление
+                </button>
+                
+                <button
+                   onClick={() => {
+                      setPaymentModalType('expense');
+                      setShowQuickPaymentModal(true);
+                   }}
+                   className="flex items-center gap-2 px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm"
+                >
+                   <TrendingDown size={16} />
+                   Платеж
+                </button>
+                
+                <button
+                   onClick={() => setShowAccountabilityModal(true)}
+                   className="flex items-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm"
+                >
+                   <Users size={16} />
+                   Подотчетность
+                </button>
+                
+                <button
+                   onClick={() => setShowPlanPaymentModal(true)}
+                   className="flex items-center gap-2 px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 text-sm"
+                >
+                   <Target size={16} />
+                   Запланировать
+                </button>
+                
+                <button
+                   onClick={() => setShowAnalyticsModal(true)}
+                   className="flex items-center gap-2 px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 text-sm"
+                >
+                   <BarChart3 size={16} />
+                   Аналитика
+                </button>
+                
+                <button
+                   className="flex items-center gap-2 px-3 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 text-sm"
+                >
+                   <Zap size={16} />
+                   Быстрый ввод
+                </button>
+             </div>
           </div>
           
           <div className="space-y-6">
@@ -680,6 +771,77 @@ const PaymentCalendar = ({
                 </div>
              ))}
           </div>
+          
+          {/* Quick Payment Modal */}
+          <QuickPaymentModal
+            isOpen={showQuickPaymentModal}
+            onClose={() => setShowQuickPaymentModal(false)}
+            onSave={(transaction) => {
+              addTransaction(transaction);
+              setShowQuickPaymentModal(false);
+            }}
+            initialType={paymentModalType}
+            context={{
+              currentUser,
+              projects,
+              counterparties,
+              cashAccounts,
+              financialArticles,
+              estimates,
+              transactions,
+              aiConfig: null // TODO: Add AI config from context
+            }}
+          />
+          
+          {/* Accountability Modal */}
+          <AccountabilityModal
+            isOpen={showAccountabilityModal}
+            onClose={() => setShowAccountabilityModal(false)}
+            onSave={(transaction) => {
+              addTransaction(transaction);
+              setShowAccountabilityModal(false);
+            }}
+            context={{
+              currentUser,
+              counterparties,
+              cashAccounts,
+              projects,
+              transactions,
+              aiConfig: null
+            }}
+          />
+          
+          {/* Plan Payment Modal */}
+          <PlanPaymentModal
+            isOpen={showPlanPaymentModal}
+            onClose={() => setShowPlanPaymentModal(false)}
+            onSave={(plannedTransaction) => {
+              addTransaction(plannedTransaction);
+              setShowPlanPaymentModal(false);
+            }}
+            context={{
+              currentUser,
+              projects,
+              cashAccounts,
+              transactions,
+              aiConfig: null
+            }}
+          />
+          
+          {/* Analytics Dashboard */}
+          <PaymentAnalyticsDashboard
+            isOpen={showAnalyticsModal}
+            onClose={() => setShowAnalyticsModal(false)}
+            context={{
+              currentUser,
+              transactions,
+              projects,
+              estimates,
+              cashAccounts,
+              counterparties,
+              aiConfig: null
+            }}
+          />
        </div>
     );
 };

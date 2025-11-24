@@ -612,6 +612,13 @@ export interface Transaction {
     
     // For Accountable Persons
     accountable_person_id?: string; // Employee User ID
+    
+    // Planning & Execution Fields
+    is_planned?: boolean;
+    planned_date?: string;
+    executed_date?: string;
+    execution_progress?: number; // 0-100
+    original_payment_schedule_id?: string; // Link to payment schedule if executed from it
 }
 
 // --- CRM Module ---
