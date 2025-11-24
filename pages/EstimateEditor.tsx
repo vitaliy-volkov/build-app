@@ -657,6 +657,153 @@ const CalcBindingModal = ({ isOpen, onClose, onConfirm, calcTypes, rooms }: any)
     );
 };
 
+export const MeasurementBindingPanel = ({ estimate, measurements, onUpdate }: any) => {
+    const [selectedFloorId, setSelectedFloorId] = useState(estimate.measurementBinding?.floorId || '');
+    const [selectedRoomId, setSelectedRoomId] = useState(estimate.measurementBinding?.roomId || '');
+
+    const floors = measurements?.floors || [];
+    const rooms = selectedFloorId ? floors.find((f: any) => f.id === selectedFloorId)?.rooms || [] : [];
+    const selectedRoom = rooms.find((r: any) => r.id === selectedRoomId);
+
+    // Update local state if estimate changes externally
+    useEffect(() => {
+        if (estimate.measurementBinding) {
+            setSelectedFloorId(estimate.measurementBinding.floorId);
+            setSelectedRoomId(estimate.measurementBinding.roomId);
+        }
+    }, [estimate.measurementBinding]);
+
+    const handleSave = () => {
+        if (!selectedRoomId) return;
+        onUpdate({
+            ...estimate,
+            measurementBinding: {
+                measurementProjectId: measurements.id,
+                floorId: selectedFloorId,
+                roomId: selectedRoomId,
+                lastSyncedAt: measurements.updated_at
+            }
+        });
+    };
+
+    const isStale = estimate.measurementBinding && measurements && measurements.updated_at > estimate.measurementBinding.lastSyncedAt;
+
+    if (!measurements) return null;
+
+    // SVG ViewBox Calc
+    const points = selectedRoom?.points || [];
+    const minX = points.length > 0 ? Math.min(...points.map((p:any) => p.x)) : 0;
+    const maxX = points.length > 0 ? Math.max(...points.map((p:any) => p.x)) : 100;
+    const minY = points.length > 0 ? Math.min(...points.map((p:any) => p.y)) : 0;
+    const maxY = points.length > 0 ? Math.max(...points.map((p:any) => p.y)) : 100;
+    const width = maxX - minX || 100;
+    const height = maxY - minY || 100;
+    const viewBox = `${minX - width*0.1} ${minY - height*0.1} ${width * 1.2} ${height * 1.2}`;
+
+    return (
+        <div className="bg-white border-b border-slate-200 p-4">
+             <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center space-x-2">
+                    <Layers size={16} className="text-blue-600"/>
+                    <span className="font-bold text-sm text-slate-700">Привязка к замерам</span>
+                </div>
+                {isStale && (
+                    <div className="flex items-center text-amber-600 text-xs font-bold bg-amber-50 px-2 py-1 rounded">
+                        <Info size={12} className="mr-1"/>
+                        Данные устарели
+                    </div>
+                )}
+            </div>
+            
+            <div className="flex space-x-2 mb-4">
+                <select 
+                    className="flex-1 p-2 border rounded text-sm bg-slate-50 outline-none focus:border-blue-500"
+                    value={selectedFloorId}
+                    onChange={(e) => {
+                        setSelectedFloorId(e.target.value);
+                        setSelectedRoomId('');
+                    }}
+                >
+                    <option value="">Выберите этаж</option>
+                    {floors.map((f: any) => <option key={f.id} value={f.id}>{f.name}</option>)}
+                </select>
+                <select 
+                    className="flex-1 p-2 border rounded text-sm bg-slate-50 outline-none focus:border-blue-500"
+                    value={selectedRoomId}
+                    onChange={(e) => setSelectedRoomId(e.target.value)}
+                    disabled={!selectedFloorId}
+                >
+                    <option value="">Выберите помещение</option>
+                    {rooms.map((r: any) => <option key={r.id} value={r.id}>{r.name}</option>)}
+                </select>
+                <button 
+                    onClick={handleSave}
+                    disabled={!selectedRoomId || (estimate.measurementBinding?.roomId === selectedRoomId && !isStale)}
+                    className="px-3 py-2 bg-blue-600 text-white rounded text-sm font-medium disabled:opacity-50 disabled:bg-slate-300 transition-colors whitespace-nowrap"
+                >
+                    {estimate.measurementBinding?.roomId === selectedRoomId && isStale ? 'Синхронизировать' : 'Привязать'}
+                </button>
+            </div>
+
+            {selectedRoom && (
+                <div className="flex space-x-4">
+                    {/* Compact Plan Preview */}
+                    <div className="w-24 h-24 bg-slate-50 border rounded flex items-center justify-center relative overflow-hidden flex-shrink-0">
+                        {selectedRoom.points && selectedRoom.points.length > 2 ? (
+                            <svg viewBox={viewBox} className="w-full h-full p-1">
+                                <polygon 
+                                    points={selectedRoom.points.map((p: any) => `${p.x},${p.y}`).join(' ')} 
+                                    fill="#dbeafe" 
+                                    stroke="#2563eb" 
+                                    strokeWidth="0.5"
+                                    vectorEffect="non-scaling-stroke"
+                                />
+                            </svg>
+                        ) : (
+                            <span className="text-xs text-slate-400">Нет плана</span>
+                        )}
+                    </div>
+                    
+                    {/* Metrics Table */}
+                    <div className="flex-1 overflow-x-auto">
+                        <table className="w-full text-xs text-left">
+                            <thead className="text-slate-500 font-medium border-b">
+                                <tr>
+                                    <th className="pb-1 font-normal">Параметр</th>
+                                    <th className="pb-1 font-normal">Значение</th>
+                                    <th className="pb-1 font-normal">Ед.</th>
+                                </tr>
+                            </thead>
+                            <tbody className="text-slate-700">
+                                <tr className="border-b border-slate-50">
+                                    <td className="py-1">Площадь пола</td>
+                                    <td className="font-bold">{calculateMetric(selectedRoom, 'floor_area')}</td>
+                                    <td>м²</td>
+                                </tr>
+                                <tr className="border-b border-slate-50">
+                                    <td className="py-1">Периметр</td>
+                                    <td className="font-bold">{calculateMetric(selectedRoom, 'perimeter')}</td>
+                                    <td>м</td>
+                                </tr>
+                                <tr className="border-b border-slate-50">
+                                    <td className="py-1">Площадь стен</td>
+                                    <td className="font-bold">{calculateMetric(selectedRoom, 'wall_area_net')}</td>
+                                    <td>м²</td>
+                                </tr>
+                                <tr>
+                                    <td className="py-1">Высота потолка</td>
+                                    <td className="font-bold">{calculateMetric(selectedRoom, 'wall_height')}</td>
+                                    <td>м</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
+
 export const EstimateEditor: React.FC = () => {
   const { projectId, estimateId } = useParams();
   const navigate = useNavigate();
@@ -1198,6 +1345,17 @@ export const EstimateEditor: React.FC = () => {
            </div>
 
            <div className="flex space-x-1 bg-slate-100 p-1 rounded-lg overflow-x-auto">
+                </div>
+            </div>
+            {projectMeasurements && estimate && (
+                <MeasurementBindingPanel 
+                   estimate={estimate} 
+                   measurements={projectMeasurements} 
+                   onUpdate={updateEstimate} 
+                />
+            )}
+            <div className="border-b border-slate-200 px-4 pt-2 flex justify-between items-end bg-slate-50">
+                <div className="flex items-center space-x-2 overflow-x-auto hide-scrollbar">
               <TabButton label="Редактор" icon={Edit} active={activeTab === 'editor'} onClick={() => handleTabChange('editor')} />
               <TabButton label="Заказчик" icon={UserIcon} active={activeTab === 'customer'} onClick={() => handleTabChange('customer')} />
               <TabButton label="График платежей" icon={Calendar} active={activeTab === 'schedule'} onClick={() => handleTabChange('schedule')} />

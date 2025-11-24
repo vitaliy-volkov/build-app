@@ -197,6 +197,14 @@ export interface Estimate {
   payment_conditions?: string; // NEW
   payment_schedule?: EstimatePaymentScheduleItem[]; // NEW
 
+  // Measurement Binding
+  measurementBinding?: {
+    measurementProjectId: string;
+    floorId: string;
+    roomId: string;
+    lastSyncedAt: string;
+  };
+
   // Versioning
   version?: number;
   original_estimate_id?: string; // ID of the first version (root)
