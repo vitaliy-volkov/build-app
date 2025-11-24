@@ -74,6 +74,50 @@ graph TB
     Metrics --> Alerts
 ```
 
+## Модульная архитектура фронтенда
+
+```mermaid
+graph TB
+    subgraph "App Shell (Core)"
+        Router[🛣️ Router]
+        Auth[🔐 Auth Service]
+        Registry[📚 Module Registry]
+        Guard[🛡️ Access Guard]
+        Nav[🧭 Navigation]
+    end
+
+    subgraph "Modules (Lazy Loaded)"
+        Projects[📋 Projects Module]
+        Estimates[💰 Estimates Module]
+        Finance[📊 Finance Module]
+        CRM[👥 CRM Module]
+        Supply[🚛 Supply Module]
+        Docs[📄 Docs Module]
+    end
+
+    subgraph "Shared Services"
+        UI[🎨 UI Kit]
+        API[🌐 API Client]
+        Store[💾 Global Store]
+    end
+
+    Router --> Registry
+    Registry --> Guard
+    Guard --> Projects
+    Guard --> Estimates
+    Guard --> Finance
+    Guard --> CRM
+    Guard --> Supply
+    Guard --> Docs
+
+    Projects --> UI
+    Projects --> API
+    Estimates --> UI
+    Estimates --> API
+    
+    Auth --> Guard
+```
+
 ## Архитектура бэкенда
 
 ```mermaid
