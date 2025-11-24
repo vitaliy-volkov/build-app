@@ -1,0 +1,64 @@
+<svg width="1200" height="475" viewBox="0 0 1200 475" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background gradient -->
+  <defs>
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1e3a8a;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#3b82f6;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#60a5fa;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="textGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#ffffff;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#f3f4f6;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1200" height="475" fill="url(#bgGradient)"/>
+
+  <!-- Construction elements -->
+  <!-- Building silhouette -->
+  <path d="M100 200 L150 150 L200 160 L250 140 L300 150 L350 130 L400 140 L400 400 L100 400 Z" fill="#374151" opacity="0.3"/>
+  <path d="M150 150 L200 160 L250 140 L300 150 L350 130 L400 140 L400 200 L350 190 L300 200 L250 180 L200 190 L150 180 Z" fill="#6b7280" opacity="0.4"/>
+
+  <!-- Crane -->
+  <line x1="800" y1="100" x2="800" y2="400" stroke="#9ca3af" stroke-width="4"/>
+  <line x1="750" y1="150" x2="850" y2="150" stroke="#9ca3af" stroke-width="3"/>
+  <circle cx="800" cy="140" r="8" fill="#ef4444"/>
+  <rect x="795" y="120" width="10" height="20" fill="#374151"/>
+
+  <!-- Blueprint -->
+  <rect x="500" y="250" width="150" height="100" fill="#ffffff" opacity="0.9" rx="5"/>
+  <line x1="510" y1="270" x2="630" y2="270" stroke="#3b82f6" stroke-width="2"/>
+  <line x1="510" y1="290" x2="620" y2="290" stroke="#3b82f6" stroke-width="2"/>
+  <line x1="510" y1="310" x2="640" y2="310" stroke="#3b82f6" stroke-width="2"/>
+  <circle cx="520" cy="330" r="3" fill="#10b981"/>
+  <circle cx="540" cy="330" r="3" fill="#10b981"/>
+  <circle cx="560" cy="330" r="3" fill="#10b981"/>
+
+  <!-- Main title -->
+  <text x="600" y="120" font-family="Arial, sans-serif" font-size="48" font-weight="bold" fill="url(#textGradient)" text-anchor="middle">
+    Строй-Контроль
+  </text>
+
+  <!-- Subtitle -->
+  <text x="600" y="160" font-family="Arial, sans-serif" font-size="24" fill="#e5e7eb" text-anchor="middle">
+    Система управления строительством
+  </text>
+
+  <!-- Tech badges -->
+  <rect x="450" y="200" width="80" height="25" fill="#10b981" rx="12"/>
+  <text x="490" y="217" font-family="Arial, sans-serif" font-size="12" fill="white" text-anchor="middle">React</text>
+
+  <rect x="540" y="200" width="80" height="25" fill="#3b82f6" rx="12"/>
+  <text x="580" y="217" font-family="Arial, sans-serif" font-size="12" fill="white" text-anchor="middle">TypeScript</text>
+
+  <rect x="630" y="200" width="80" height="25" fill="#8b5cf6" rx="12"/>
+  <text x="670" y="217" font-family="Arial, sans-serif" font-size="12" fill="white" text-anchor="middle">AI Powered</text>
+
+  <!-- Decorative elements -->
+  <circle cx="200" cy="100" r="2" fill="#fbbf24"/>
+  <circle cx="300" cy="80" r="2" fill="#fbbf24"/>
+  <circle cx="400" cy="90" r="2" fill="#fbbf24"/>
+  <circle cx="1000" cy="120" r="2" fill="#fbbf24"/>
+  <circle cx="1100" cy="100" r="2" fill="#fbbf24"/>
+</svg>
