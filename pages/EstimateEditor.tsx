@@ -3,7 +3,7 @@ import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useApp } from '../App';
 import { 
-  EstimateItem, EstimateItemType, ResourceType, CalculatedEstimateItem, UserRole, EstimateStatus, NotificationType, PriceListCategory, PriceListItem, Counterparty, CounterpartyType, WorkCompletionAct, WorkCompletionActItem, Estimate, AIAnalysisResult, EstimatePaymentScheduleItem, DesignFile, DesignMarker
+  EstimateItem, EstimateItemType, ResourceType, CalculatedEstimateItem, UserRole, EstimateStatus, NotificationType, PriceListCategory, PriceListItem, Counterparty, CounterpartyType, WorkCompletionAct, WorkCompletionActItem, Estimate, AIAnalysisResult, EstimatePaymentScheduleItem, DesignFile, DesignMarker, MeasurementProject, CalcBinding, MeasurementRoom
 } from '../types';
 import { AIService } from '../services/aiService';
 import { 
@@ -111,7 +111,7 @@ const KPIGrid = ({ totalPrice, totalCost, profit, matCost, workCost, mechCost, d
     </div>
 );
 
-const EditorView = ({ tree, canEdit, showFinancials, expandedIds, toggleExpand, selectedItemIds, setSelectedItemIds, onUpdate, onAdd, onDelete, setContextMenu, handleDragStart, handleDragOver, handleDrop, dragOverInfo, counterparties, onAddFromTemplate, linkedItemIds, region }: any) => {
+const EditorView = ({ tree, canEdit, showFinancials, expandedIds, toggleExpand, selectedItemIds, setSelectedItemIds, onUpdate, onAdd, onDelete, setContextMenu, handleDragStart, handleDragOver, handleDrop, dragOverInfo, counterparties, onAddFromTemplate, linkedItemIds, region, measurements }: any) => {
     // Recursive rendering of estimate items
     const renderNode = (node: CalculatedEstimateItem, level: number = 0) => {
         const isExpanded = expandedIds.includes(node.id);
@@ -208,6 +208,61 @@ const EditorView = ({ tree, canEdit, showFinancials, expandedIds, toggleExpand, 
                                 <span className={isGroup ? "font-bold" : ""}>{node.name}</span>
                             )}
                             {linkedItemIds.has(node.id) && <span className="ml-2 text-[10px] bg-purple-100 text-purple-600 px-1.5 rounded">Design</span>}
+                            
+                            {node.calcBinding && (
+                                <div className="flex items-center mt-1 text-[10px] space-x-2" onClick={e => e.stopPropagation()}>
+                                    <span className={clsx(
+                                        "px-1.5 py-0.5 rounded flex items-center space-x-1 cursor-pointer transition-colors",
+                                        node.calcBinding.autoEnabled ? "bg-blue-100 text-blue-700 hover:bg-blue-200" : "bg-slate-100 text-slate-500 hover:bg-slate-200"
+                                    )}
+                                    title="Нажмите чтобы переключить режим авто-расчета"
+                                    onClick={() => {
+                                        onUpdate({
+                                            ...node,
+                                            calcBinding: {
+                                                ...node.calcBinding,
+                                                autoEnabled: !node.calcBinding.autoEnabled
+                                            }
+                                        });
+                                    }}
+                                    >
+                                        <Layers size={10} className="mr-1"/>
+                                        {node.calcBinding.calculationType}
+                                        {node.calcBinding.autoEnabled ? <Check size={10} className="ml-1"/> : <X size={10} className="ml-1"/>}
+                                    </span>
+                                    
+                                    {node.calcBinding.autoEnabled && (
+                                        <button 
+                                            className={clsx(
+                                                "p-0.5 rounded transition-colors",
+                                                (measurements && measurements.updated_at > node.calcBinding.lastSyncedAt) 
+                                                    ? "text-amber-600 bg-amber-100 hover:bg-amber-200 animate-pulse" 
+                                                    : "text-slate-400 hover:bg-slate-200 hover:text-blue-600"
+                                            )}
+                                            title={measurements && measurements.updated_at > node.calcBinding.lastSyncedAt ? "Замеры изменились, нажмите для обновления" : "Обновить объем из замеров"}
+                                            onClick={() => {
+                                                if (measurements && node.calcBinding?.measurementIds.length > 0) {
+                                                     const room = measurements.floors.flatMap((f: any) => f.rooms).find((r: any) => r.id === node.calcBinding!.measurementIds[0]);
+                                                     if (room) {
+                                                         const newVal = calculateMetric(room, node.calcBinding!.calculationType);
+                                                         onUpdate({
+                                                             ...node,
+                                                             quantity: newVal,
+                                                             calcBinding: {
+                                                                 ...node.calcBinding,
+                                                                 lastValue: newVal,
+                                                                 lastSyncedAt: new Date().toISOString()
+                                                             }
+                                                         });
+                                                     }
+                                                }
+                                            }}
+                                        >
+                                            <RefreshCw size={10} />
+                                        </button>
+                                    )}
+                                </div>
+                            )}
                         </div>
 
                         {/* Columns */}
@@ -227,9 +282,19 @@ const EditorView = ({ tree, canEdit, showFinancials, expandedIds, toggleExpand, 
                                     {canEdit ? (
                                         <input 
                                             type="number"
-                                            className="w-full text-right bg-transparent outline-none border-b border-transparent focus:border-blue-300" 
+                                            className={clsx(
+                                                "w-full text-right bg-transparent outline-none border-b border-transparent focus:border-blue-300",
+                                                node.calcBinding?.autoEnabled ? "text-blue-600 font-bold" : ""
+                                            )} 
                                             value={node.quantity} 
-                                            onChange={(e) => onUpdate({ ...node, quantity: Number(e.target.value) })}
+                                            onChange={(e) => {
+                                                const val = Number(e.target.value);
+                                                onUpdate({ 
+                                                    ...node, 
+                                                    quantity: val,
+                                                    calcBinding: node.calcBinding ? { ...node.calcBinding, autoEnabled: false } : undefined
+                                                });
+                                            }}
                                             onClick={e => e.stopPropagation()}
                                         />
                                     ) : node.quantity}
@@ -484,6 +549,114 @@ const AddFromTemplateForm = ({ templates, onAdd, onCancel }: any) => {
     );
 };
 
+const calculateMetric = (room: MeasurementRoom, metric: string): number => {
+    // 1. Try Manual Stats first
+    if (room.mode === 'manual' && room.manualStats) {
+        switch (metric) {
+            case 'floor_area': return room.manualStats.floorArea;
+            case 'ceiling_area': return room.manualStats.ceilingArea;
+            case 'perimeter': return room.manualStats.perimeter;
+            case 'wall_area_net': return room.manualStats.wallAreaNet;
+            case 'wall_height': return room.manualStats.wallHeight;
+            default: return 0;
+        }
+    }
+
+    // 2. Fallback to Drawing Mode (simplified)
+    if (room.points && room.points.length > 2) {
+         // shoelace formula for area
+         let area = 0;
+         for (let i = 0; i < room.points.length; i++) {
+             const j = (i + 1) % room.points.length;
+             area += room.points[i].x * room.points[j].y;
+             area -= room.points[j].x * room.points[i].y;
+         }
+         area = Math.abs(area) / 2;
+         
+         // perimeter
+         let perimeter = 0;
+         for (let i = 0; i < room.points.length; i++) {
+            const j = (i + 1) % room.points.length;
+            const dx = room.points[j].x - room.points[i].x;
+            const dy = room.points[j].y - room.points[i].y;
+            perimeter += Math.sqrt(dx*dx + dy*dy);
+         }
+
+         const areaM2 = area / 1000000;
+         const perimeterM = perimeter / 1000;
+         const wallHeightM = room.height / 1000;
+         const wallAreaGross = perimeterM * wallHeightM;
+         const openingsArea = room.openings.reduce((sum, o) => sum + (o.width * o.height), 0) / 1000000;
+         
+         switch (metric) {
+            case 'floor_area': return Number(areaM2.toFixed(2));
+            case 'ceiling_area': return Number(areaM2.toFixed(2));
+            case 'perimeter': return Number(perimeterM.toFixed(2));
+            case 'wall_area_net': return Number((wallAreaGross - openingsArea).toFixed(2));
+            case 'wall_height': return Number(wallHeightM.toFixed(2));
+            default: return 0;
+         }
+    }
+    
+    return 0;
+};
+
+const CalcBindingModal = ({ isOpen, onClose, onConfirm, calcTypes, rooms }: any) => {
+    const [selectedRoomId, setSelectedRoomId] = useState<string>('');
+    const [selectedMetric, setSelectedMetric] = useState<string>(calcTypes[0]);
+    
+    if (!isOpen) return null;
+
+    const room = rooms.find((r: any) => r.id === selectedRoomId);
+    const previewValue = room ? calculateMetric(room, selectedMetric) : 0;
+
+    return (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
+                <div className="flex justify-between items-center mb-4">
+                    <h3 className="text-lg font-bold">Авто-расчет объема</h3>
+                    <button onClick={onClose}><X size={20}/></button>
+                </div>
+                
+                <div className="mb-4">
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Помещение</label>
+                    <select className="w-full p-2 border rounded" value={selectedRoomId} onChange={e => setSelectedRoomId(e.target.value)}>
+                        <option value="">-- Выберите помещение --</option>
+                        {rooms.map((r: any) => <option key={r.id} value={r.id}>{r.name}</option>)}
+                    </select>
+                </div>
+
+                <div className="mb-4">
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Метрика</label>
+                    <select className="w-full p-2 border rounded" value={selectedMetric} onChange={e => setSelectedMetric(e.target.value)}>
+                        {calcTypes.map((t: string) => (
+                             <option key={t} value={t}>{t}</option>
+                        ))}
+                    </select>
+                </div>
+                
+                {selectedRoomId && (
+                    <div className="mb-6 p-3 bg-blue-50 text-blue-800 rounded text-sm flex justify-between items-center">
+                        <span>Расчетное значение:</span>
+                        <span className="font-bold text-lg">{previewValue}</span>
+                    </div>
+                )}
+
+                <div className="flex space-x-2">
+                    <button onClick={onClose} className="flex-1 py-2 bg-slate-100 text-slate-600 rounded">Пропустить</button>
+                    <button 
+                        onClick={() => onConfirm(selectedRoomId, selectedMetric, previewValue)} 
+                        disabled={!selectedRoomId} 
+                        className="flex-1 py-2 bg-blue-600 text-white rounded disabled:opacity-50 font-bold"
+                    >
+                        Применить
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 export const EstimateEditor: React.FC = () => {
   const { projectId, estimateId } = useParams();
   const navigate = useNavigate();
@@ -494,12 +667,24 @@ export const EstimateEditor: React.FC = () => {
     acts, addAct, updateAct, deleteAct,
     operationTemplates, operationTemplateItems,
     addItemToPriceList, addItemToOperationTemplate,
-    aiConfig, designFiles, projects
+    aiConfig, designFiles, projects, measurements
   } = useApp();
   
   const estimate = estimates.find(e => e.id === estimateId);
   const project = projects.find(p => p.id === projectId);
   
+  // Auto-calc binding state
+  const [calcBindingModal, setCalcBindingModal] = useState<{
+    open: boolean;
+    parentId?: string;
+    type?: EstimateItemType;
+    template?: any;
+    calcTypes: string[];
+  }>({ open: false, calcTypes: [] });
+
+  const projectMeasurements = measurements.find(m => m.projectId === projectId);
+  const allRooms = useMemo(() => projectMeasurements ? projectMeasurements.floors.flatMap(f => f.rooms) : [], [projectMeasurements]);
+
   const versions = useMemo(() => {
      if (!estimate) return [];
      const rootId = estimate.original_estimate_id || estimate.id;
@@ -575,8 +760,21 @@ export const EstimateEditor: React.FC = () => {
 
   const handleCollapseAll = () => setExpandedIds([]);
 
-  const handleAddItem = (parentId: string | undefined, type: EstimateItemType, template?: Partial<EstimateItem>) => {
+  const handleAddItem = (parentId: string | undefined, type: EstimateItemType, template?: any) => {
     if (!canEdit) return;
+
+    // Check for auto-calc types in template
+    if (template?.calc_types && template.calc_types.length > 0) {
+        setCalcBindingModal({
+            open: true,
+            parentId,
+            type,
+            template,
+            calcTypes: template.calc_types
+        });
+        return;
+    }
+
     const newItem: EstimateItem = {
       id: uuidv4(),
       estimate_id: estimateId!,
@@ -589,10 +787,41 @@ export const EstimateEditor: React.FC = () => {
       markup: template?.markup || 20,
       unit: template?.unit || 'шт',
       order: projectEstimateItems.filter(i => i.parent_id === parentId).length,
-      price_list_item_id: template?.price_list_item_id
+      price_list_item_id: template?.price_list_item_id,
+      calcBinding: template?.calcBinding
     };
     addEstimateItem(newItem);
     if (parentId && !expandedIds.includes(parentId)) toggleExpand(parentId);
+  };
+
+  const handleConfirmCalcBinding = (roomId: string, metric: string, value: number) => {
+      const { parentId, type, template } = calcBindingModal;
+      
+      const newItem: EstimateItem = {
+          id: uuidv4(),
+          estimate_id: estimateId!,
+          parent_id: parentId,
+          item_type: type!,
+          resource_type: type === EstimateItemType.Position ? (template?.resource_type || ResourceType.Work) : undefined,
+          name: template?.name || 'Новая позиция',
+          quantity: value,
+          cost_price: template?.cost_price || 0,
+          markup: template?.markup || 20,
+          unit: template?.unit || 'шт',
+          order: projectEstimateItems.filter(i => i.parent_id === parentId).length,
+          price_list_item_id: template?.id || template?.price_list_item_id,
+          calcBinding: {
+              calculationType: metric,
+              measurementIds: [roomId],
+              lastValue: value,
+              autoEnabled: true,
+              lastSyncedAt: new Date().toISOString()
+          }
+      };
+      
+      addEstimateItem(newItem);
+      if (parentId && !expandedIds.includes(parentId)) toggleExpand(parentId);
+      setCalcBindingModal({ open: false, calcTypes: [] });
   };
 
   const handleDeleteItem = (id: string) => {
@@ -1071,6 +1300,7 @@ export const EstimateEditor: React.FC = () => {
                         onAddFromTemplate={(parentId: string) => setAddTemplateModal({ open: true, parentId })}
                         linkedItemIds={linkedItemIds}
                         region={project?.address}
+                        measurements={projectMeasurements}
                     />
                 )}
                 {activeTab === 'customer' && <CustomerView tree={tree} expandedIds={expandedIds} toggleExpand={toggleExpand} />}
@@ -1250,6 +1480,14 @@ export const EstimateEditor: React.FC = () => {
           </div>
         </div>
       )}
+
+      <CalcBindingModal
+        isOpen={calcBindingModal.open}
+        onClose={() => setCalcBindingModal({ ...calcBindingModal, open: false })}
+        onConfirm={handleConfirmCalcBinding}
+        calcTypes={calcBindingModal.calcTypes}
+        rooms={allRooms}
+      />
     </div>
   );
 };

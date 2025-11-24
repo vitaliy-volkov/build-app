@@ -104,6 +104,7 @@ export interface PriceListItem {
   cost_price: number;
   markup: number;
   customer_price?: number; // Computed on fly usually
+  calc_types?: string[]; // New: Supported auto-calculation types
 }
 
 // --- Operation Templates (Tech Cards) ---
@@ -214,6 +215,14 @@ export enum ResourceType {
   Delivery = "Доставка"
 }
 
+export interface CalcBinding {
+  calculationType: string;
+  measurementIds: string[]; // Linked room IDs
+  lastValue: number;
+  autoEnabled: boolean;
+  lastSyncedAt: string;
+}
+
 export interface EstimateItem {
   id: string;
   estimate_id: string;
@@ -236,6 +245,9 @@ export interface EstimateItem {
   
   // Calculated
   progress?: number; // 0-100%
+
+  // New: Auto Volumes
+  calcBinding?: CalcBinding;
 }
 
 export enum PaymentDirection {
