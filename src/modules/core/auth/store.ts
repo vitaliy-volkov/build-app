@@ -1,106 +1,79 @@
-// src/modules/core/auth/store.ts
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
-import { AuthState, User } from './types';
+import { User, UserRole } from './types';
 import { MOCK_USERS } from '../../../services/mockData';
-import { UserRole } from '../../../types';
 import { v4 as uuidv4 } from 'uuid';
 
-interface AuthActions {
-  login: (email: string, name?: string) => Promise<void>;
+interface AuthState {
+  isAuthenticated: boolean;
+  currentUser: User;
+  users: User[];
+
+  // Actions
+  login: (email: string, name?: string) => void;
   logout: () => void;
-  updateUser: (user: Partial<User>) => void;
-  clearError: () => void;
+  setCurrentUser: (user: User) => void;
+  updateUser: (user: User) => void;
+  addUser: (user: User) => void;
 }
 
-export const useAuthStore = create<AuthState & AuthActions>()(
-  persist(
-    (set) => ({
-      user: null,
-      token: null,
-      isAuthenticated: false,
-      isLoading: false,
-      error: null,
+export const useAuthStore = create<AuthState>((set, get) => ({
+  isAuthenticated: false,
+  // Initial user is the first one from mock data, but we are not authenticated yet.
+  // App.tsx was setting MOCK_USERS[0] as default.
+  currentUser: MOCK_USERS[0],
+  users: MOCK_USERS,
 
-      login: async (email: string, name?: string) => {
-        set({ isLoading: true, error: null });
-
-        try {
-          // Simulate API delay
-          await new Promise(resolve => setTimeout(resolve, 500));
-
-          let user: User;
-
-          // Check if mock user exists (simple logic for now)
-          const mockUser = MOCK_USERS.find(u => u.email === email);
-
-          if (mockUser) {
-             user = {
-                 id: mockUser.id,
-                 name: mockUser.name,
-                 email: mockUser.email || email,
-                 role: mockUser.role,
-                 avatar_initials: mockUser.avatar_initials,
-                 is_active: mockUser.is_active || true
-             };
-          } else if (name) {
-             // Register new mock user
-             user = {
-                id: uuidv4(),
-                name: name,
-                email: email,
-                role: UserRole.Director,
-                avatar_initials: name.substring(0, 2).toUpperCase(),
-                is_active: true
-             };
-          } else {
-              // Fallback for demo
-              user = {
-                  id: MOCK_USERS[0].id,
-                  name: MOCK_USERS[0].name,
-                  email: MOCK_USERS[0].email || 'demo@example.com',
-                  role: MOCK_USERS[0].role,
-                  avatar_initials: MOCK_USERS[0].avatar_initials,
-                  is_active: true
-              };
-          }
-
-          const fakeToken = `mock-jwt-${Date.now()}`;
-
-          set({
-            user,
-            token: fakeToken,
-            isAuthenticated: true,
-            isLoading: false
-          });
-
-        } catch (err) {
-          set({
-            error: 'Failed to login',
-            isLoading: false
-          });
-        }
-      },
-
-      logout: () => {
-        set({ user: null, token: null, isAuthenticated: false });
-      },
-
-      updateUser: (updates) => {
-        set((state) => ({
-          user: state.user ? { ...state.user, ...updates } : null
-        }));
-      },
-
-      clearError: () => set({ error: null })
-    }),
-    {
-      name: 'auth-storage',
-      partialize: (state) => ({
-        user: state.user,
-        token: state.token,
-        isAuthenticated: state.isAuthenticated
-      }),
+  login: (email: string, name?: string) => {
+    if (name) {
+      // Logic from App.tsx
+      const newUser: User = {
+        id: uuidv4(),
+        name: name,
+        email: email,
+        role: UserRole.Director,
+        avatar_initials: name.substring(0,2).toUpperCase(),
+        is_active: true
+      };
+      set((state) => ({
+        users: [...state.users, newUser],
+        currentUser: newUser,
+        isAuthenticated: true
+      }));
+    } else {
+      // Simple login, resetting to default user as per App.tsx logic?
+      // App.tsx: setCurrentUser(MOCK_USERS[0]); setIsAuthenticated(true);
+      // It seems it doesn't look up user by email in the mock logic in App.tsx
+      // But maybe we should improve it slightly?
+      // "Use mock data for now (mirroring `MOCK_USERS` from `src/services/mockData.ts`)"
+      // I will stick to App.tsx logic to not break behavior.
+      set({
+        currentUser: MOCK_USERS[0],
+        isAuthenticated: true
+      });
     }
-  )
-);
+  },
+
+  logout: () => {
+    set({ isAuthenticated: false });
+  },
+
+  setCurrentUser: (user: User) => {
+    set({ currentUser: user });
+  },
+
+  updateUser: (updatedUser: User) => {
+    set((state) => {
+      const newUsers = state.users.map(u => u.id === updatedUser.id ? updatedUser : u);
+      // If current user is updated, update it too
+      const newCurrentUser = state.currentUser.id === updatedUser.id ? updatedUser : state.currentUser;
+      return {
+        users: newUsers,
+        currentUser: newCurrentUser
+      };
+    });
+  },
+
+  addUser: (user: User) => {
+    set((state) => ({ users: [...state.users, user] }));
+  }
+}));
