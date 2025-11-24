@@ -436,8 +436,212 @@ const CustomerView = ({ tree, expandedIds, toggleExpand }: any) => (
 );
 
 const PaymentScheduleView = ({ estimate, totalAmount, canEdit, onUpdate }: any) => {
-    // Mock implementation
-    return <div className="p-8 text-center text-slate-500">График платежей в разработке</div>;
+    const [schedule, setSchedule] = useState<EstimatePaymentScheduleItem[]>(
+        estimate.payment_schedule || [
+            {
+                id: uuidv4(),
+                date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+                amount: Math.round(totalAmount * 0.3),
+                percent: 30,
+                description: 'Начальный платеж',
+                is_paid: false
+            },
+            {
+                id: uuidv4(),
+                date: new Date(Date.now() + 21 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+                amount: Math.round(totalAmount * 0.4),
+                percent: 40,
+                description: 'Промежуточный платеж',
+                is_paid: false
+            },
+            {
+                id: uuidv4(),
+                date: new Date(Date.now() + 35 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+                amount: Math.round(totalAmount * 0.3),
+                percent: 30,
+                description: 'Финальный платеж',
+                is_paid: false
+            }
+        ]
+    );
+    const [isAdding, setIsAdding] = useState(false);
+    const [newItem, setNewItem] = useState({
+        date: new Date().toISOString().split('T')[0],
+        percent: 0,
+        description: ''
+    });
+
+    const totalScheduled = schedule.reduce((sum, item) => sum + item.amount, 0);
+    const totalPaid = schedule.filter(item => item.is_paid).reduce((sum, item) => sum + item.amount, 0);
+
+    const handleAddItem = () => {
+        if (newItem.percent > 0 && newItem.description) {
+            const amount = Math.round(totalAmount * newItem.percent / 100);
+            const item: EstimatePaymentScheduleItem = {
+                id: uuidv4(),
+                date: newItem.date,
+                amount,
+                percent: newItem.percent,
+                description: newItem.description,
+                is_paid: false
+            };
+            setSchedule([...schedule, item].sort((a, b) => a.date.localeCompare(b.date)));
+            setNewItem({ date: new Date().toISOString().split('T')[0], percent: 0, description: '' });
+            setIsAdding(false);
+            onUpdate && onUpdate({ ...estimate, payment_schedule: [...schedule, item] });
+        }
+    };
+
+    const handleDeleteItem = (id: string) => {
+        const updated = schedule.filter(item => item.id !== id);
+        setSchedule(updated);
+        onUpdate && onUpdate({ ...estimate, payment_schedule: updated });
+    };
+
+    const handleTogglePaid = (id: string) => {
+        const updated = schedule.map(item => 
+            item.id === id ? { ...item, is_paid: !item.is_paid } : item
+        );
+        setSchedule(updated);
+        onUpdate && onUpdate({ ...estimate, payment_schedule: updated });
+    };
+
+    return (
+        <div className="p-6">
+            <div className="flex justify-between items-center mb-6">
+                <h3 className="text-lg font-bold text-slate-800">График платежей</h3>
+                {canEdit && (
+                    <button
+                        onClick={() => setIsAdding(true)}
+                        className="px-3 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 flex items-center"
+                    >
+                        <Plus size={16} className="mr-2" /> Добавить этап
+                    </button>
+                )}
+            </div>
+
+            {/* Summary */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <div className="bg-white p-4 rounded-lg border border-slate-200">
+                    <div className="text-sm text-slate-500">Всего по смете</div>
+                    <div className="text-xl font-bold text-slate-800">{totalAmount.toLocaleString()} ₽</div>
+                </div>
+                <div className="bg-white p-4 rounded-lg border border-slate-200">
+                    <div className="text-sm text-slate-500">Запланировано</div>
+                    <div className="text-xl font-bold text-blue-600">{totalScheduled.toLocaleString()} ₽</div>
+                    <div className="text-xs text-slate-500">{((totalScheduled / totalAmount) * 100).toFixed(1)}%</div>
+                </div>
+                <div className="bg-white p-4 rounded-lg border border-slate-200">
+                    <div className="text-sm text-slate-500">Оплачено</div>
+                    <div className="text-xl font-bold text-green-600">{totalPaid.toLocaleString()} ₽</div>
+                    <div className="text-xs text-slate-500">{((totalPaid / totalAmount) * 100).toFixed(1)}%</div>
+                </div>
+            </div>
+
+            {/* Add New Item Form */}
+            {isAdding && (
+                <div className="bg-blue-50 p-4 rounded-lg mb-6">
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <input
+                            type="date"
+                            value={newItem.date}
+                            onChange={e => setNewItem({ ...newItem, date: e.target.value })}
+                            className="p-2 border border-slate-300 rounded-lg"
+                        />
+                        <input
+                            type="number"
+                            placeholder="% от суммы"
+                            value={newItem.percent || ''}
+                            onChange={e => setNewItem({ ...newItem, percent: Number(e.target.value) })}
+                            className="p-2 border border-slate-300 rounded-lg"
+                            min="1"
+                            max="100"
+                        />
+                        <input
+                            type="text"
+                            placeholder="Описание этапа"
+                            value={newItem.description}
+                            onChange={e => setNewItem({ ...newItem, description: e.target.value })}
+                            className="p-2 border border-slate-300 rounded-lg"
+                        />
+                        <div className="flex gap-2">
+                            <button
+                                onClick={handleAddItem}
+                                className="flex-1 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700"
+                            >
+                                Сохранить
+                            </button>
+                            <button
+                                onClick={() => setIsAdding(false)}
+                                className="px-3 py-2 bg-slate-500 text-white rounded-lg hover:bg-slate-600"
+                            >
+                                Отмена
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Schedule Items */}
+            <div className="space-y-3">
+                {schedule.map((item, index) => (
+                    <div key={item.id} className="bg-white p-4 rounded-lg border border-slate-200">
+                        <div className="flex items-center justify-between">
+                            <div className="flex-1">
+                                <div className="flex items-center gap-4">
+                                    <span className="text-sm font-medium text-slate-500">Этап {index + 1}</span>
+                                    <span className="text-sm text-slate-600">{item.date}</span>
+                                    {item.is_paid && (
+                                        <span className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full font-medium">
+                                            Оплачено
+                                        </span>
+                                    )}
+                                </div>
+                                <div className="mt-1 font-medium text-slate-800">{item.description}</div>
+                                <div className="mt-2 flex items-center gap-4">
+                                    <span className="text-lg font-bold text-blue-600">{item.amount.toLocaleString()} ₽</span>
+                                    <span className="text-sm text-slate-500">{item.percent}% от суммы</span>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                {canEdit && (
+                                    <>
+                                        <button
+                                            onClick={() => handleTogglePaid(item.id)}
+                                            className={`p-2 rounded-lg border ${item.is_paid 
+                                                ? 'border-green-300 bg-green-50 text-green-600' 
+                                                : 'border-slate-300 bg-white text-slate-600 hover:bg-slate-50'
+                                            }`}
+                                            title={item.is_paid ? "Отметить как неоплаченный" : "Отметить как оплаченный"}
+                                        >
+                                            <Check size={16} />
+                                        </button>
+                                        <button
+                                            onClick={() => handleDeleteItem(item.id)}
+                                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg"
+                                            title="Удалить этап"
+                                        >
+                                            <Trash2 size={16} />
+                                        </button>
+                                    </>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                ))}
+            </div>
+
+            {schedule.length === 0 && (
+                <div className="text-center py-8 text-slate-500">
+                    <Calendar size={48} className="mx-auto mb-4 text-slate-300" />
+                    <p>График платежей не сформирован</p>
+                    {canEdit && (
+                        <p className="text-sm mt-2">Нажмите "Добавить этап" для создания графика</p>
+                    )}
+                </div>
+            )}
+        </div>
+    );
 };
 
 const ContractorView = ({ tree, expandedIds, toggleExpand, counterparties, canEdit, onUpdate }: any) => (
