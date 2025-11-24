@@ -45,8 +45,6 @@ import { About, Contacts } from './pages/InfoPages';
 import { Blog, BlogPost } from './pages/Blog';
 import { v4 as uuidv4 } from 'uuid';
 import { ArrowRight } from 'lucide-react';
-import { useAuthStore } from './modules/core/auth/store';
-import { AuthGuard } from './modules/core/auth/AuthGuard';
 
 // --- State Management (Context) ---
 interface AppState {
@@ -171,7 +169,9 @@ export const useApp = () => {
 };
 
 const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { isAuthenticated, currentUser, users, login, logout, setCurrentUser, updateUser, addUser } = useAuthStore();
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [users, setUsers] = useState(MOCK_USERS);
+  const [currentUser, setCurrentUser] = useState<User>(MOCK_USERS[0]); 
   
   const [projects, setProjects] = useState(MOCK_PROJECTS);
   const [counterparties, setCounterparties] = useState(MOCK_COUNTERPARTIES);
@@ -213,12 +213,46 @@ const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [companySettings, setCompanySettings] = useState(MOCK_COMPANY_SETTINGS);
   const [aiConfig, setAiConfig] = useState(MOCK_AI_CONFIG);
 
+  // Auth Actions
+  const login = (email: string, name?: string) => {
+    if (name) {
+      const newUser: User = {
+        id: uuidv4(),
+        name: name,
+        email: email,
+        role: UserRole.Director, 
+        avatar_initials: name.substring(0,2).toUpperCase(),
+        is_active: true
+      };
+      setUsers(prev => [...prev, newUser]);
+      setCurrentUser(newUser);
+    } else {
+      setCurrentUser(MOCK_USERS[0]);
+    }
+    setIsAuthenticated(true);
+  };
+
+  const logout = () => {
+    setIsAuthenticated(false);
+  };
+
   const addProject = (project: Project) => {
     setProjects(prev => [...prev, project]);
   };
 
   const updateProject = (updatedProject: Project) => {
     setProjects(prev => prev.map(p => p.id === updatedProject.id ? updatedProject : p));
+  };
+
+  const updateUser = (updatedUser: User) => {
+    setUsers(prev => prev.map(u => u.id === updatedUser.id ? updatedUser : u));
+    if (currentUser.id === updatedUser.id) {
+        setCurrentUser(updatedUser);
+    }
+  };
+
+  const addUser = (user: User) => {
+    setUsers(prev => [...prev, user]);
   };
 
   const addPayment = (payment: Payment) => {
@@ -758,64 +792,58 @@ const ScrollToTop = () => {
 };
 
 const AppRoutes = () => {
+  const { isAuthenticated } = useApp();
+
+  if (!isAuthenticated) {
+    return (
+      <PublicLayout>
+        <Routes>
+          <Route path="/" element={<Landing />} />
+          <Route path="/estimates-promo" element={<EstimatesPromo />} />
+          <Route path="/finance-promo" element={<FinancePromo />} />
+          <Route path="/ai-promo" element={<AIPromo />} />
+          <Route path="/supply-promo" element={<SupplyPromo />} />
+          <Route path="/about" element={<About />} />
+          <Route path="/contacts" element={<Contacts />} />
+          <Route path="/blog" element={<Blog />} />
+          <Route path="/blog/:id" element={<BlogPost />} />
+          <Route path="/login" element={<Auth />} />
+          <Route path="/register" element={<Auth />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </PublicLayout>
+    );
+  }
+
   return (
-    <Routes>
-      <Route path="/" element={
-        <PublicRoute>
-          <Landing />
-        </PublicRoute>
-      } />
-      <Route path="/estimates-promo" element={<PublicRoute><EstimatesPromo /></PublicRoute>} />
-      <Route path="/finance-promo" element={<PublicRoute><FinancePromo /></PublicRoute>} />
-      <Route path="/ai-promo" element={<PublicRoute><AIPromo /></PublicRoute>} />
-      <Route path="/supply-promo" element={<PublicRoute><SupplyPromo /></PublicRoute>} />
-      <Route path="/about" element={<PublicRoute><About /></PublicRoute>} />
-      <Route path="/contacts" element={<PublicRoute><Contacts /></PublicRoute>} />
-      <Route path="/blog" element={<PublicRoute><Blog /></PublicRoute>} />
-      <Route path="/blog/:id" element={<PublicRoute><BlogPost /></PublicRoute>} />
-      <Route path="/login" element={<PublicRoute><Auth /></PublicRoute>} />
-      <Route path="/register" element={<PublicRoute><Auth /></PublicRoute>} />
+    <Layout>
+      <Routes>
+        <Route path="/" element={<CompanyDashboard />} />
+        <Route path="/projects" element={<ProjectList />} />
+        <Route path="/project/:id" element={<ProjectDashboard />} />
+        <Route path="/project/:projectId/estimate/:estimateId" element={<EstimateEditor />} />
+        <Route path="/estimates" element={<EstimatesList />} />
+        <Route path="/crm" element={<CRM />} />
+        <Route path="/directories" element={<Directories />} />
+        <Route path="/finance" element={<Finance />} />
+        <Route path="/resources" element={<Resources />} />
+        <Route path="/knowledge" element={<KnowledgeBase />} />
+        <Route path="/measurements" element={<Measurements />} />
+        <Route path="/settings" element={<Settings />} />
+        <Route path="/profile" element={<Profile />} />
+        
+        {/* Global Module Routes */}
+        <Route path="/schedule" element={<GlobalModulePage title="Графики работ" type="schedule" />} />
+        <Route path="/design" element={<GlobalModulePage title="Дизайн-проекты" type="design" />} />
+        <Route path="/supply" element={<GlobalModulePage title="Снабжение" type="supply" />} />
+        <Route path="/complectation" element={<GlobalModulePage title="Комплектация" type="complectation" />} />
+        <Route path="/docs" element={<GlobalModulePage title="Документооборот" type="docs" />} />
+        <Route path="/acts" element={<GlobalModulePage title="Акты (КС-2/КС-3)" type="acts" />} />
+        <Route path="/chats" element={<GlobalModulePage title="Чаты и Коммуникации" type="team" />} />
+        <Route path="/photos" element={<GlobalModulePage title="Фотоотчеты" type="photos" />} />
 
-      {/* Protected Routes */}
-      <Route path="/dashboard" element={<AuthGuard><Layout><CompanyDashboard /></Layout></AuthGuard>} />
-      <Route path="/projects" element={<AuthGuard><Layout><ProjectList /></Layout></AuthGuard>} />
-      <Route path="/project/:id" element={<AuthGuard><Layout><ProjectDashboard /></Layout></AuthGuard>} />
-      <Route path="/project/:projectId/estimate/:estimateId" element={<AuthGuard><Layout><EstimateEditor /></Layout></AuthGuard>} />
-      <Route path="/estimates" element={<AuthGuard><Layout><EstimatesList /></Layout></AuthGuard>} />
-      <Route path="/crm" element={<AuthGuard><Layout><CRM /></Layout></AuthGuard>} />
-      <Route path="/directories" element={<AuthGuard><Layout><Directories /></Layout></AuthGuard>} />
-      <Route path="/finance" element={<AuthGuard><Layout><Finance /></Layout></AuthGuard>} />
-      <Route path="/resources" element={<AuthGuard><Layout><Resources /></Layout></AuthGuard>} />
-      <Route path="/knowledge" element={<AuthGuard><Layout><KnowledgeBase /></Layout></AuthGuard>} />
-      <Route path="/measurements" element={<AuthGuard><Layout><Measurements /></Layout></AuthGuard>} />
-      <Route path="/settings" element={<AuthGuard><Layout><Settings /></Layout></AuthGuard>} />
-      <Route path="/profile" element={<AuthGuard><Layout><Profile /></Layout></AuthGuard>} />
-
-      {/* Global Module Routes */}
-      <Route path="/schedule" element={<AuthGuard><Layout><GlobalModulePage title="Графики работ" type="schedule" /></Layout></AuthGuard>} />
-      <Route path="/design" element={<AuthGuard><Layout><GlobalModulePage title="Дизайн-проекты" type="design" /></Layout></AuthGuard>} />
-      <Route path="/supply" element={<AuthGuard><Layout><GlobalModulePage title="Снабжение" type="supply" /></Layout></AuthGuard>} />
-      <Route path="/complectation" element={<AuthGuard><Layout><GlobalModulePage title="Комплектация" type="complectation" /></Layout></AuthGuard>} />
-      <Route path="/docs" element={<AuthGuard><Layout><GlobalModulePage title="Документооборот" type="docs" /></Layout></AuthGuard>} />
-      <Route path="/acts" element={<AuthGuard><Layout><GlobalModulePage title="Акты (КС-2/КС-3)" type="acts" /></Layout></AuthGuard>} />
-      <Route path="/chats" element={<AuthGuard><Layout><GlobalModulePage title="Чаты и Коммуникации" type="team" /></Layout></AuthGuard>} />
-      <Route path="/photos" element={<AuthGuard><Layout><GlobalModulePage title="Фотоотчеты" type="photos" /></Layout></AuthGuard>} />
-
-      {/* Default redirect based on auth status */}
-      <Route path="*" element={<AuthRedirect />} />
-    </Routes>
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </Layout>
   );
 };
-
-const PublicRoute: React.FC<{children: React.ReactNode}> = ({ children }) => {
-  const { isAuthenticated } = useAuthStore();
-  if (isAuthenticated) {
-     return <Navigate to="/dashboard" replace />;
-  }
-  return <PublicLayout>{children}</PublicLayout>;
-}
-
-const AuthRedirect = () => {
-    const { isAuthenticated } = useAuthStore();
-    return isAuthenticated ? <Navigate to="/dashboard" replace /> : <Navigate to="/" replace />;
-}
