@@ -10,6 +10,19 @@ import (
 	"stroy-control-backend/internal/models"
 )
 
+// @Summary List projects
+// @Description Get list of projects with pagination
+// @Tags Projects
+// @Security ApiKeyAuth
+// @Produce json
+// @Param page query int false "Page number" default(1)
+// @Param limit query int false "Items per page" default(20)
+// @Param sort_by query string false "Sort field" default(created_at)
+// @Param sort_desc query bool false "Sort descending" default(false)
+// @Success 200 {object} PaginatedResponse
+// @Failure 401 {object} object{error=string,code=int}
+// @Router /projects [get]
+
 // ProjectRequest структуры для запросов проекта
 type CreateProjectRequest struct {
 	CompanyID           string                    `json:"company_id" binding:"required,uuid"`
@@ -115,6 +128,18 @@ func (h *ProjectHandler) ListProjects(c *gin.Context) {
 		limit,
 	))
 }
+
+// @Summary Create new project
+// @Description Create a new construction project
+// @Tags Projects
+// @Security ApiKeyAuth
+// @Accept json
+// @Produce json
+// @Param request body CreateProjectRequest true "Project data"
+// @Success 201 {object} object{success=bool,message=string,data=object}
+// @Failure 400 {object} object{error=string,code=int,details=string}
+// @Failure 403 {object} object{error=string,code=int}
+// @Router /projects [post]
 
 // CreateProject создать новый проект
 func (h *ProjectHandler) CreateProject(c *gin.Context) {

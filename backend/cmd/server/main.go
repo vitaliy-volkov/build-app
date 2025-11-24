@@ -11,10 +11,13 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"stroy-control-backend/docs"
 	"stroy-control-backend/internal/auth"
 	"stroy-control-backend/internal/company"
 	"stroy-control-backend/internal/config"
+	"stroy-control-backend/internal/middleware"
 	"stroy-control-backend/internal/project"
+	"stroy-control-backend/internal/redis"
 )
 
 func main() {
@@ -31,6 +34,17 @@ func main() {
 	}
 	defer db.Close()
 
+	// Initialize Redis Service
+	redisService := redis.NewRedisService(cfg)
+	defer redisService.Close()
+
+	// Test Redis connection
+	if err := redisService.HealthCheck(); err != nil {
+		log.Printf("Warning: Redis connection failed: %v", err)
+	} else {
+		log.Println("Redis connection established")
+	}
+
 	// Initialize JWT Service
 	jwtService := auth.NewJWTService(cfg)
 	
@@ -43,24 +57,24 @@ func main() {
 	// Initialize Company Router
 	companyRouter := company.NewRouterGroup(db.GetDB(), authRouter.GetMiddleware())
 
-	// Set up Gin router with CORS middleware
+	// Set up Gin router with middleware
 	r := gin.Default()
+
+	// Initialize rate limiting middleware
+	rateLimitMiddleware := middleware.NewRateLimitMiddleware(redisService)
 	
-	// Enable CORS for frontend integration
-	r.Use(func(c *gin.Context) {
-		c.Header("Access-Control-Allow-Origin", "*")
-		c.Header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-		c.Header("Access-Control-Allow-Headers", "Origin, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
-		c.Header("Access-Control-Expose-Headers", "Content-Length")
-		c.Header("Access-Control-Allow-Credentials", "true")
-		
-		if c.Request.Method == "OPTIONS" {
-			c.AbortWithStatus(204)
-			return
-		}
-		
-		c.Next()
-	})
+	// Add global middleware
+	r.Use(middleware.RequestIDMiddleware())
+	r.Use(middleware.LoggingMiddleware())
+	r.Use(middleware.ErrorHandlingMiddleware())
+	r.Use(middleware.SecurityHeadersMiddleware())
+	r.Use(middleware.CORSMiddleware())
+	
+	// Add rate limiting middleware
+	r.Use(rateLimitMiddleware.RateLimitByIP())
+	
+	// Add token blacklist middleware for protected routes
+	r.Use(rateLimitMiddleware.TokenBlacklistMiddleware())
 
 	// Register authentication routes
 	authRouter.RegisterRoutes(r)
@@ -70,6 +84,9 @@ func main() {
 
 	// Register company routes
 	companyRouter.RegisterRoutes(r)
+
+	// Initialize Swagger documentation
+	docs.InitSwagger(r)
 
 	// Health Check with Database
 	r.GET("/health", func(c *gin.Context) {

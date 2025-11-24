@@ -11,6 +11,7 @@ type Config struct {
 	Server   ServerConfig   `mapstructure:"server"`
 	Database DatabaseConfig `mapstructure:"database"`
 	JWT      JWTConfig      `mapstructure:"jwt"`
+	Redis    RedisConfig    `mapstructure:"redis"`
 }
 
 type ServerConfig struct {
@@ -33,6 +34,13 @@ type JWTConfig struct {
 	AccessTokenTTL   time.Duration `mapstructure:"access_token_ttl"`
 	RefreshTokenTTL  time.Duration `mapstructure:"refresh_token_ttl"`
 	Issuer           string        `mapstructure:"issuer"`
+}
+
+type RedisConfig struct {
+	Host     string `mapstructure:"host"`
+	Port     int    `mapstructure:"port"`
+	Password string `mapstructure:"password"`
+	DB       int    `mapstructure:"db"`
 }
 
 func Load() (*Config, error) {
@@ -58,6 +66,12 @@ func Load() (*Config, error) {
 	viper.SetDefault("jwt.access_token_ttl", 15*time.Minute)      // 15 minutes
 	viper.SetDefault("jwt.refresh_token_ttl", 7*24*time.Hour)     // 7 days
 	viper.SetDefault("jwt.issuer", "stroy-control-backend")
+
+	// Redis defaults
+	viper.SetDefault("redis.host", "localhost")
+	viper.SetDefault("redis.port", 6379)
+	viper.SetDefault("redis.password", "")
+	viper.SetDefault("redis.db", 0)
 
 	viper.AutomaticEnv()
 
