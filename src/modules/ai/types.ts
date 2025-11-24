@@ -1,89 +1,54 @@
-// src/modules/ai/types.ts
+export type SeverityLevel = 'low' | 'medium' | 'high' | 'critical';
 
-// AI Analysis Types
+export interface LocationData {
+  x: number;
+  y: number;
+  width?: number;
+  height?: number;
+  pageNumber?: number;
+}
+
+export interface TimeEstimate {
+  value: number;
+  unit: 'hours' | 'days' | 'weeks';
+}
+
+export interface DefectDetectionResult {
+  id: string;
+  defectType: string;
+  confidence: number; // 0-100
+  location: LocationData;
+  severity: SeverityLevel;
+  description: string;
+  suggestedFix: string;
+  estimatedCost: number;
+  timeToFix: TimeEstimate;
+  relatedDrawingElements?: string[]; // IDs of related elements
+}
+
+export interface DrawingAnalysisResult {
+  elements: any[]; // Placeholder for detailed elements if needed
+  complianceIssues: any[];
+  summary: string;
+}
+
+export interface ChatResponse {
+  message: string;
+  actions?: string[];
+}
+
+export type AIAnalysisType = 'drawing_analysis' | 'defect_detection' | 'chat';
 
 export interface AIAnalysisRequest {
-    type: 'drawing' | 'estimate' | 'defect' | 'chat';
-    data: any; // Generic payload depending on type
-    options?: AIAnalysisOptions;
+  id: string;
+  type: AIAnalysisType;
+  payload: File | string; // File for drawing, URL for defect detection, string for chat
+  context?: Record<string, any>;
 }
 
-export interface AIAnalysisOptions {
-    checkCompliance?: boolean;
-    detectAnomalies?: boolean;
-    suggestOptimizations?: boolean;
-    generateReport?: boolean;
-    priority?: 'speed' | 'accuracy';
-}
-
-export interface AIAnalysisResponse<T> {
-    result: T;
-    confidence: number;
-    processingTime: number;
-    tokensUsed?: number;
-    model?: string;
-}
-
-// Drawing Analysis Result
-export interface DrawingAnalysisResult {
-    elements: any[]; // DrawingElement[]
-    issues: any[];   // ComplianceIssue[]
-    summary: string;
-}
-
-// Defect Detection Result
-export interface DefectDetectionResult {
-    defects: DetectedDefect[];
-    imageQualityScore: number;
-}
-
-export interface DetectedDefect {
-    type: string;
-    confidence: number;
-    boundingBox: {
-        x: number;
-        y: number;
-        width: number;
-        height: number;
-    };
-    severity: 'low' | 'medium' | 'high' | 'critical';
-    description: string;
-    suggestedAction?: string;
-}
-
-// Estimate Analysis Result
-export interface EstimateAnalysisResult {
-    risks: EstimateRisk[];
-    optimizations: EstimateOptimization[];
-    marketComparison: MarketComparison;
-}
-
-export interface EstimateRisk {
-    category: 'price' | 'quantity' | 'timing' | 'completeness';
-    description: string;
-    severity: 'low' | 'medium' | 'high';
-    probability: number; // 0-1
-}
-
-export interface EstimateOptimization {
-    description: string;
-    potentialSavings: number;
-    difficulty: 'easy' | 'medium' | 'hard';
-}
-
-export interface MarketComparison {
-    percentile: number; // e.g. 75th percentile of market prices
-    avgDifference: number; // % diff from market avg
-}
-
-// Chat Types
-export interface AIChatMessage {
-    id: string;
-    role: 'user' | 'assistant' | 'system';
-    content: string;
-    timestamp: string;
-    context?: {
-        projectId?: string;
-        documentId?: string;
-    };
+export interface AIAnalysisResponse<T = any> {
+  success: boolean;
+  data?: T;
+  error?: string;
+  processingTime?: number;
 }
