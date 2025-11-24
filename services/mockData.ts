@@ -324,14 +324,18 @@ export const MOCK_COMPANY_SETTINGS: CompanySettings = {
 
 export const MOCK_AI_CONFIG: AIConfiguration = {
     providers: [
-        { id: 'google', name: 'Google Gemini', enabled: true, apiKey: '', models: ['gemini-2.5-flash', 'gemini-3-pro-preview'] },
-        { id: 'openai', name: 'OpenAI', enabled: false, models: ['gpt-4o'] }
+        { id: 'google', providerType: 'google', name: 'Google Gemini', enabled: true, apiKey: '', models: ['gemini-2.5-flash', 'gemini-2.0-flash-exp', 'gemini-1.5-pro'], isCustom: false },
+        { id: 'openai', providerType: 'openai', name: 'OpenAI', enabled: false, apiKey: '', models: ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo'], isCustom: false },
+        { id: 'anthropic', providerType: 'anthropic', name: 'Anthropic Claude', enabled: false, apiKey: '', models: ['claude-3-5-sonnet-20241022', 'claude-3-opus-20240229'], isCustom: false },
+        { id: 'groq', providerType: 'groq', name: 'Groq', enabled: false, apiKey: '', models: ['llama-3.3-70b-versatile', 'mixtral-8x7b-32768'], isCustom: false },
+        { id: 'ollama', providerType: 'ollama', name: 'Ollama (Local)', enabled: false, baseUrl: 'http://localhost:11434', models: ['llama3.2', 'mistral'], isCustom: false },
+        { id: 'openrouter', providerType: 'openrouter', name: 'OpenRouter', enabled: false, apiKey: '', baseUrl: 'https://openrouter.ai/api/v1', models: ['openai/gpt-4o'], isCustom: false }
     ],
     taskDefaults: {
         chat: { providerId: 'google', modelId: 'gemini-2.5-flash' },
         estimate_analysis: { providerId: 'google', modelId: 'gemini-2.5-flash' },
         risk_assessment: { providerId: 'google', modelId: 'gemini-2.5-flash' },
-        generation: { providerId: 'google', modelId: 'gemini-2.5-flash-image' }
+        generation: { providerId: 'google', modelId: 'gemini-2.5-flash' }
     },
     prompts: {
         chat_system: 'Ты полезный помощник строителя.',

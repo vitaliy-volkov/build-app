@@ -624,19 +624,21 @@ export interface AIAnalysisResult {
 export type LLMProvider = 'google' | 'openai' | 'anthropic' | 'groq' | 'ollama' | 'openrouter' | 'custom';
 
 export interface AIProviderConfig {
-  id: LLMProvider;
+  id: string; // Unique identifier (can be any string for custom providers)
+  providerType: LLMProvider; // Maps to adapter type
   name: string;
   enabled: boolean;
   apiKey?: string;
   baseUrl?: string; // For Ollama, OpenRouter, Custom
   models: string[]; // List of available model IDs
+  isCustom?: boolean; // Flag to indicate if this is user-added (allows deletion)
 }
 
 export type AITaskType = 'chat' | 'estimate_analysis' | 'risk_assessment' | 'generation';
 
 export interface AIConfiguration {
   providers: AIProviderConfig[];
-  taskDefaults: Record<AITaskType, { providerId: LLMProvider, modelId: string }>;
+  taskDefaults: Record<AITaskType, { providerId: string, modelId: string }>;
   prompts: {
     chat_system: string;
     estimate_analysis_system: string;

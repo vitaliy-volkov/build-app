@@ -367,6 +367,7 @@ const AISettings = ({ config, onSave }: { config: AIConfiguration, onSave: (c: A
    const [localConfig, setLocalConfig] = useState(config);
    const [activeSection, setActiveSection] = useState<'providers' | 'models' | 'prompts'>('providers');
    const [modelDrafts, setModelDrafts] = useState<Record<string, string>>({});
+   const [isAddProviderModalOpen, setIsAddProviderModalOpen] = useState(false);
    const initialPromptsRef = useRef(config.prompts);
 
    const enabledProviders = localConfig.providers.filter(p => p.enabled);
@@ -376,7 +377,23 @@ const AISettings = ({ config, onSave }: { config: AIConfiguration, onSave: (c: A
       setLocalConfig({ ...localConfig, providers: newProviders });
    };
 
-   const handleTaskModelChange = (task: AITaskType, providerId: LLMProvider, modelId: string) => {
+   const handleAddProvider = (provider: AIProviderConfig) => {
+      setLocalConfig(prev => ({
+         ...prev,
+         providers: [...prev.providers, provider]
+      }));
+   };
+
+   const handleRemoveProvider = (id: string) => {
+      const provider = localConfig.providers.find(p => p.id === id);
+      if (!provider?.isCustom) return;
+      setLocalConfig(prev => ({
+         ...prev,
+         providers: prev.providers.filter(p => p.id !== id)
+      }));
+   };
+
+   const handleTaskModelChange = (task: AITaskType, providerId: string, modelId: string) => {
       setLocalConfig(prev => ({
          ...prev,
          taskDefaults: {
@@ -493,25 +510,51 @@ const AISettings = ({ config, onSave }: { config: AIConfiguration, onSave: (c: A
             <div className="flex-1 space-y-6">
                {activeSection === 'providers' && (
                   <div className="space-y-6">
-                     <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 text-sm text-blue-800">
-                        Подключите только необходимые провайдеры: отключенные не будут использоваться в счётчиках. Для OpenRouter, Ollama и Custom укажите собственный Base URL.
+                     <div className="flex justify-between items-center">
+                        <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 text-sm text-blue-800 flex-1">
+                           Подключите только необходимые провайдеры: отключенные не будут использоваться в счётчиках. Для OpenRouter, Ollama и Custom укажите собственный Base URL.
+                        </div>
+                        <button 
+                           onClick={() => setIsAddProviderModalOpen(true)}
+                           className="ml-4 bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 flex items-center shadow-sm whitespace-nowrap"
+                        >
+                           <Plus size={18} className="mr-2" /> Добавить провайдера
+                        </button>
                      </div>
                      {localConfig.providers.map(provider => (
                         <div key={provider.id} className={`p-5 rounded-2xl border transition-all ${provider.enabled ? 'border-blue-200 bg-white shadow-sm' : 'border-slate-200 bg-slate-50 opacity-80'}`}>
                            <div className="flex items-center justify-between mb-4">
-                              <div className="flex items-center space-x-3">
+                              <div className="flex items-center space-x-3 flex-1">
                                  <div className={`p-2 rounded-lg ${provider.enabled ? 'bg-blue-100 text-blue-600' : 'bg-slate-100 text-slate-400'}`}>
-                                    {provider.id === 'openai' || provider.id === 'anthropic' ? <Sparkles size={20} /> : <Server size={20} />}
+                                    {provider.providerType === 'openai' || provider.providerType === 'anthropic' ? <Sparkles size={20} /> : <Server size={20} />}
                                  </div>
-                                 <div>
-                                    <h4 className="font-bold text-slate-800">{provider.name}</h4>
-                                    <p className="text-xs text-slate-500">{provider.models.length ? provider.models.join(', ') : 'Модели не заданы'}</p>
+                                 <div className="flex-1">
+                                    <div className="flex items-center gap-2">
+                                       <h4 className="font-bold text-slate-800">{provider.name}</h4>
+                                       {provider.isCustom && (
+                                          <span className="px-2 py-0.5 rounded text-xs bg-purple-100 text-purple-700 font-medium">Пользовательский</span>
+                                       )}
+                                    </div>
+                                    <p className="text-xs text-slate-500">
+                                       Тип: {provider.providerType} · {provider.models.length ? provider.models.join(', ') : 'Модели не заданы'}
+                                    </p>
                                  </div>
                               </div>
-                              <label className="relative inline-flex items-center cursor-pointer">
-                                 <input type="checkbox" className="sr-only peer" checked={provider.enabled} onChange={e => handleProviderChange(provider.id, 'enabled', e.target.checked)} />
-                                 <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                              </label>
+                              <div className="flex items-center gap-2">
+                                 {provider.isCustom && (
+                                    <button 
+                                       onClick={() => handleRemoveProvider(provider.id)}
+                                       className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                                       title="Удалить провайдера"
+                                    >
+                                       <Trash2 size={18} />
+                                    </button>
+                                 )}
+                                 <label className="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" className="sr-only peer" checked={provider.enabled} onChange={e => handleProviderChange(provider.id, 'enabled', e.target.checked)} />
+                                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                 </label>
+                              </div>
                            </div>
 
                            {provider.enabled && (
@@ -526,7 +569,7 @@ const AISettings = ({ config, onSave }: { config: AIConfiguration, onSave: (c: A
                                        onChange={e => handleProviderChange(provider.id, 'apiKey', e.target.value)} 
                                     />
                                  </div>
-                                 {(provider.id === 'ollama' || provider.id === 'openrouter' || provider.id === 'custom') && (
+                                 {(provider.providerType === 'ollama' || provider.providerType === 'openrouter' || provider.providerType === 'custom') && (
                                     <div>
                                        <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Base URL</label>
                                        <input 
@@ -602,18 +645,22 @@ const AISettings = ({ config, onSave }: { config: AIConfiguration, onSave: (c: A
                         })}
                      </div>
 
-                     { (Object.keys(localConfig.taskDefaults) as AITaskType[]).map(task => (
-                        <TaskModelSelector 
-                           key={task}
-                           meta={TASK_META[task]}
-                           task={task}
-                           config={localConfig}
-                           onChange={handleTaskModelChange}
-                           onClone={handleCloneTaskModel}
-                        />
-                     ))}
-                  </div>
-               )}
+                      { (Object.keys(localConfig.taskDefaults) as AITaskType[]).map(task => {
+                         const taskMeta = TASK_META[task];
+                         return (
+                            <React.Fragment key={task}>
+                               <TaskModelSelector
+                                  meta={taskMeta}
+                                  task={task}
+                                  config={localConfig}
+                                  onChange={handleTaskModelChange}
+                                  onClone={handleCloneTaskModel}
+                               />
+                            </React.Fragment>
+                         );
+                      })}
+                     </div>
+                     )}
 
                {activeSection === 'prompts' && (
                   <div className="space-y-4">
@@ -652,6 +699,16 @@ const AISettings = ({ config, onSave }: { config: AIConfiguration, onSave: (c: A
                <CheckCircle2 size={20} className="mr-2" /> Сохранить настройки AI
             </button>
          </div>
+         
+         {isAddProviderModalOpen && (
+            <AddProviderModal 
+               onClose={() => setIsAddProviderModalOpen(false)} 
+               onSave={(provider) => { 
+                  handleAddProvider(provider); 
+                  setIsAddProviderModalOpen(false); 
+               }} 
+            />
+         )}
       </div>
    );
 };
@@ -666,7 +723,7 @@ const TaskModelSelector = ({
   meta: { title: string; description: string; icon: React.ComponentType<{ size?: number }> };
   task: AITaskType;
   config: AIConfiguration;
-  onChange: (task: AITaskType, providerId: LLMProvider, modelId: string) => void;
+  onChange: (task: AITaskType, providerId: string, modelId: string) => void;
   onClone: (target: AITaskType, source: AITaskType) => void;
 }) => {
    const activeProviderId = config.taskDefaults[task].providerId;
@@ -748,6 +805,117 @@ const TaskModelSelector = ({
          </div>
       </div>
    );
+};
+
+const AddProviderModal = ({ onClose, onSave }: { onClose: () => void, onSave: (p: AIProviderConfig) => void }) => {
+    const [form, setForm] = useState({
+        name: '',
+        providerType: 'custom' as LLMProvider,
+        apiKey: '',
+        baseUrl: '',
+        models: ''
+    });
+
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        const modelsList = form.models.split(',').map(m => m.trim()).filter(m => m);
+        
+        const newProvider: AIProviderConfig = {
+            id: `custom-${Date.now()}`,
+            providerType: form.providerType,
+            name: form.name,
+            enabled: true,
+            apiKey: form.apiKey || undefined,
+            baseUrl: form.baseUrl || undefined,
+            models: modelsList,
+            isCustom: true
+        };
+        onSave(newProvider);
+    };
+
+    const needsBaseUrl = form.providerType === 'custom' || form.providerType === 'ollama' || form.providerType === 'openrouter';
+
+    return (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl p-6 animate-in fade-in zoom-in-95">
+                <div className="flex justify-between items-center mb-4">
+                    <h3 className="text-lg font-bold text-slate-800">Добавить AI провайдера</h3>
+                    <button onClick={onClose}><X size={20} className="text-slate-400 hover:text-slate-600"/></button>
+                </div>
+                <form onSubmit={handleSubmit} className="space-y-4">
+                    <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">Название провайдера</label>
+                        <input 
+                            required 
+                            value={form.name} 
+                            onChange={e => setForm({...form, name: e.target.value})} 
+                            className="w-full p-2 border border-slate-300 rounded-lg outline-none focus:border-blue-500"
+                            placeholder="Мой Custom API"
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">Тип провайдера</label>
+                        <select 
+                            value={form.providerType} 
+                            onChange={e => setForm({...form, providerType: e.target.value as LLMProvider})} 
+                            className="w-full p-2 border border-slate-300 rounded-lg outline-none focus:border-blue-500 bg-white"
+                        >
+                            <option value="custom">Custom (OpenAI-совместимый)</option>
+                            <option value="openai">OpenAI</option>
+                            <option value="anthropic">Anthropic</option>
+                            <option value="google">Google Gemini</option>
+                            <option value="groq">Groq</option>
+                            <option value="ollama">Ollama (Локальный)</option>
+                            <option value="openrouter">OpenRouter</option>
+                        </select>
+                        <p className="text-xs text-slate-500 mt-1">
+                            Выберите тип API для совместимости. Для большинства сторонних API используйте "Custom".
+                        </p>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">API Key</label>
+                            <input 
+                                type="password"
+                                value={form.apiKey} 
+                                onChange={e => setForm({...form, apiKey: e.target.value})} 
+                                className="w-full p-2 border border-slate-300 rounded-lg outline-none focus:border-blue-500"
+                                placeholder="sk-..."
+                            />
+                        </div>
+                        {needsBaseUrl && (
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">Base URL</label>
+                                <input 
+                                    value={form.baseUrl} 
+                                    onChange={e => setForm({...form, baseUrl: e.target.value})} 
+                                    className="w-full p-2 border border-slate-300 rounded-lg outline-none focus:border-blue-500"
+                                    placeholder="https://api.example.com/v1"
+                                />
+                            </div>
+                        )}
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">Модели (через запятую)</label>
+                        <input 
+                            required
+                            value={form.models} 
+                            onChange={e => setForm({...form, models: e.target.value})} 
+                            className="w-full p-2 border border-slate-300 rounded-lg outline-none focus:border-blue-500"
+                            placeholder="gpt-4o-mini, gpt-4o, gpt-3.5-turbo"
+                        />
+                        <p className="text-xs text-slate-500 mt-1">
+                            Укажите ID моделей через запятую. Вы сможете добавить больше моделей позже.
+                        </p>
+                    </div>
+                    <div className="flex space-x-2 pt-2">
+                        <button type="button" onClick={onClose} className="flex-1 py-2 bg-slate-100 text-slate-600 rounded-lg font-medium hover:bg-slate-200">Отмена</button>
+                        <button type="submit" className="flex-1 py-2 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700">Добавить</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    );
 };
 
 const TabButton = ({ label, icon: Icon, active, onClick }: any) => (
