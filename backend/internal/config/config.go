@@ -10,6 +10,7 @@ import (
 type Config struct {
 	Server   ServerConfig   `mapstructure:"server"`
 	Database DatabaseConfig `mapstructure:"database"`
+	JWT      JWTConfig      `mapstructure:"jwt"`
 }
 
 type ServerConfig struct {
@@ -27,6 +28,13 @@ type DatabaseConfig struct {
 	SSLMode  string `mapstructure:"ssl_mode"`
 }
 
+type JWTConfig struct {
+	Secret           string        `mapstructure:"secret"`
+	AccessTokenTTL   time.Duration `mapstructure:"access_token_ttl"`
+	RefreshTokenTTL  time.Duration `mapstructure:"refresh_token_ttl"`
+	Issuer           string        `mapstructure:"issuer"`
+}
+
 func Load() (*Config, error) {
 	viper.SetConfigName("config")
 	viper.SetConfigType("yaml")
@@ -36,6 +44,20 @@ func Load() (*Config, error) {
 	viper.SetDefault("server.port", 8080)
 	viper.SetDefault("server.read_timeout", 10*time.Second)
 	viper.SetDefault("server.write_timeout", 10*time.Second)
+
+	// Database defaults
+	viper.SetDefault("database.host", "localhost")
+	viper.SetDefault("database.port", 5432)
+	viper.SetDefault("database.user", "stroy_user")
+	viper.SetDefault("database.password", "stroy_password")
+	viper.SetDefault("database.dbname", "stroy_control")
+	viper.SetDefault("database.ssl_mode", "disable")
+
+	// JWT defaults
+	viper.SetDefault("jwt.secret", "your-super-secret-jwt-key-change-in-production")
+	viper.SetDefault("jwt.access_token_ttl", 15*time.Minute)      // 15 minutes
+	viper.SetDefault("jwt.refresh_token_ttl", 7*24*time.Hour)     // 7 days
+	viper.SetDefault("jwt.issuer", "stroy-control-backend")
 
 	viper.AutomaticEnv()
 

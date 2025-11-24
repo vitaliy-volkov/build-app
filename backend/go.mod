@@ -5,6 +5,31 @@ go 1.22
 require (
 	github.com/gin-gonic/gin v1.10.0
 	github.com/spf13/viper v1.19.0
+	github.com/golang-jwt/jwt/v5 v5.2.0
+	github.com/golang-migrate/migrate/v4 v4.17.1
+	github.com/joho/godotenv v1.5.1
+	github.com/sirupsen/logrus v1.9.3
+	github.com/spf13/cast v1.6.0
+	golang.org/x/crypto v0.23.0
+	gopkg.in/validator.v2 v2.0.0-20181107165045-09e50e34d56f
+	
+	// GORM and Database
+	gorm.io/driver/postgres v1.5.7
+	gorm.io/gorm v1.25.7
+	
+	// Redis
+	github.com/go-redis/redis/v8 v8.11.5
+	
+	// UUID generator
+	github.com/google/uuid v1.6.0
+	
+	// HTTP client for external APIs
+	github.com/go-resty/resty/v2 v2.10.2
+	
+	// Swagger documentation
+	github.com/swaggo/gin-swagger v1.6.0
+	github.com/swaggo/files v1.0.1
+	github.com/swaggo/swag v1.16.3
 )
 
 require (
