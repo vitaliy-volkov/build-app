@@ -8,7 +8,7 @@ import (
 
 // Company представляет компанию в системе
 type Company struct {
-	ID      string `json:"id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
+	ID      string `json:"id" gorm:"primaryKey;type:uuid"`
 	Name    string `json:"name" gorm:"not null;type:varchar(255)"`
 	Address string `json:"address" gorm:"type:text"`
 	INN     string `json:"inn" gorm:"type:varchar(20)"`
@@ -17,9 +17,9 @@ type Company struct {
 	Email   string `json:"email" gorm:"type:varchar(255)"`
 	Phone   string `json:"phone" gorm:"type:varchar(50)"`
 	Website string `json:"website" gorm:"type:varchar(255)"`
-	
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
+
+	CreatedAt time.Time      `json:"created_at"`
+	UpdatedAt time.Time      `json:"updated_at"`
 	DeletedAt gorm.DeletedAt `json:"-" gorm:"index"`
 }
 

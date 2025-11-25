@@ -2,10 +2,10 @@ package auth
 
 import (
 	"net/http"
-	"strings"
+
+	"stroy-control-backend/internal/models"
 
 	"github.com/gin-gonic/gin"
-	"stroy-control-backend/internal/models"
 )
 
 // Middleware для JWT аутентификации
@@ -60,9 +60,7 @@ func (m *AuthMiddleware) Protected() gin.HandlerFunc {
 		c.Set("user_id", claims.UserID)
 		c.Set("user_email", claims.Email)
 		c.Set("user_role", claims.Role)
-		if claims.CompanyID != nil {
-			c.Set("user_company_id", *claims.CompanyID)
-		}
+		c.Set("user_company_id", claims.CompanyID)
 		c.Set("token_claims", claims)
 
 		c.Next()
@@ -99,9 +97,7 @@ func (m *AuthMiddleware) OptionalAuth() gin.HandlerFunc {
 		c.Set("user_id", claims.UserID)
 		c.Set("user_email", claims.Email)
 		c.Set("user_role", claims.Role)
-		if claims.CompanyID != nil {
-			c.Set("user_company_id", *claims.CompanyID)
-		}
+		c.Set("user_company_id", claims.CompanyID)
 		c.Set("token_claims", claims)
 
 		c.Next()
@@ -311,12 +307,12 @@ func GetUserID(c *gin.Context) (string, bool) {
 	if !exists {
 		return "", false
 	}
-	
+
 	userIDStr, ok := userID.(string)
 	if !ok {
 		return "", false
 	}
-	
+
 	return userIDStr, true
 }
 
@@ -326,12 +322,12 @@ func GetUserRole(c *gin.Context) (string, bool) {
 	if !exists {
 		return "", false
 	}
-	
+
 	userRoleStr, ok := userRole.(string)
 	if !ok {
 		return "", false
 	}
-	
+
 	return userRoleStr, true
 }
 
@@ -341,12 +337,12 @@ func GetUserCompanyID(c *gin.Context) (*string, bool) {
 	if !exists {
 		return nil, false
 	}
-	
+
 	companyIDStr, ok := companyID.(string)
 	if !ok {
 		return nil, false
 	}
-	
+
 	return &companyIDStr, true
 }
 
@@ -356,11 +352,11 @@ func GetAllowedCompanyID(c *gin.Context) (*string, bool) {
 	if !exists {
 		return nil, false
 	}
-	
+
 	companyIDStr, ok := companyID.(string)
 	if !ok {
 		return nil, false
 	}
-	
+
 	return &companyIDStr, true
 }

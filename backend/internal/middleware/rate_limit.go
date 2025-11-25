@@ -4,15 +4,16 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/gin-gonic/gin"
-	"stroy-control-backend/internal/redis"
 	"stroy-control-backend/internal/models"
+	"stroy-control-backend/internal/redis"
+
+	"github.com/gin-gonic/gin"
 )
 
 // RateLimitMiddleware middleware для ограничения частоты запросов
 type RateLimitMiddleware struct {
-	redisService *redis.RedisService
-	defaultLimit int
+	redisService  *redis.RedisService
+	defaultLimit  int
 	defaultWindow time.Duration
 }
 
@@ -20,7 +21,7 @@ type RateLimitMiddleware struct {
 func NewRateLimitMiddleware(redisService *redis.RedisService) *RateLimitMiddleware {
 	return &RateLimitMiddleware{
 		redisService:  redisService,
-		defaultLimit:  100, // 100 запросов
+		defaultLimit:  100,       // 100 запросов
 		defaultWindow: time.Hour, // в час
 	}
 }
@@ -33,7 +34,7 @@ func (m *RateLimitMiddleware) RateLimitByIP() gin.HandlerFunc {
 		window := m.defaultWindow
 
 		// Проверяем лимит для аутентифицированных пользователей
-		if userID, exists := c.Get("user_id"); exists {
+		if _, exists := c.Get("user_id"); exists {
 			if userRole := c.GetString("user_role"); userRole == string(models.RoleAdmin) {
 				limit = 1000 // Админы имеют высокий лимит
 			} else {
@@ -158,12 +159,12 @@ func extractTokenID(token string) (string, error) {
 	if len(token) < 7 {
 		return "", nil
 	}
-	
+
 	tokenPart := token[7:] // Убираем "Bearer "
 	if len(tokenPart) < 10 {
 		return "", nil
 	}
-	
+
 	// Возвращаем первые 10 символов как ID токена (очень упрощенно)
 	return tokenPart[:10], nil
 }

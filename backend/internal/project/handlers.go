@@ -5,9 +5,10 @@ import (
 	"strconv"
 	"time"
 
+	"stroy-control-backend/internal/models"
+
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
-	"stroy-control-backend/internal/models"
 )
 
 // @Summary List projects
@@ -25,28 +26,28 @@ import (
 
 // ProjectRequest структуры для запросов проекта
 type CreateProjectRequest struct {
-	CompanyID           string                    `json:"company_id" binding:"required,uuid"`
-	Name                string                    `json:"name" binding:"required,min=2,max=255"`
-	Address             string                    `json:"address" binding:"required,min=5"`
-	ContractNumber      string                    `json:"contract_number" binding:"required,min=3,max=100"`
-	ContractDate        string                    `json:"contract_date" binding:"required,datetime=2006-01-02"`
-	Description         *string                   `json:"description,omitempty"`
-	CustomerID          *string                   `json:"customer_id,omitempty"`
-	GeneralContractorID *string                   `json:"general_contractor_id,omitempty"`
-	ContactPersonID     *string                   `json:"contact_person_id,omitempty"`
-	Status              models.ProjectStatus      `json:"status" binding:"required"`
+	CompanyID           string               `json:"company_id" binding:"required,uuid"`
+	Name                string               `json:"name" binding:"required,min=2,max=255"`
+	Address             string               `json:"address" binding:"required,min=5"`
+	ContractNumber      string               `json:"contract_number" binding:"required,min=3,max=100"`
+	ContractDate        string               `json:"contract_date" binding:"required,datetime=2006-01-02"`
+	Description         *string              `json:"description,omitempty"`
+	CustomerID          *string              `json:"customer_id,omitempty"`
+	GeneralContractorID *string              `json:"general_contractor_id,omitempty"`
+	ContactPersonID     *string              `json:"contact_person_id,omitempty"`
+	Status              models.ProjectStatus `json:"status" binding:"required"`
 }
 
 type UpdateProjectRequest struct {
-	Name                *string                   `json:"name,omitempty"`
-	Address             *string                   `json:"address,omitempty"`
-	ContractNumber      *string                   `json:"contract_number,omitempty"`
-	ContractDate        *string                   `json:"contract_date,omitempty"`
-	Description         *string                   `json:"description,omitempty"`
-	CustomerID          *string                   `json:"customer_id,omitempty"`
-	GeneralContractorID *string                   `json:"general_contractor_id,omitempty"`
-	ContactPersonID     *string                   `json:"contact_person_id,omitempty"`
-	Status              *models.ProjectStatus     `json:"status,omitempty"`
+	Name                *string               `json:"name,omitempty"`
+	Address             *string               `json:"address,omitempty"`
+	ContractNumber      *string               `json:"contract_number,omitempty"`
+	ContractDate        *string               `json:"contract_date,omitempty"`
+	Description         *string               `json:"description,omitempty"`
+	CustomerID          *string               `json:"customer_id,omitempty"`
+	GeneralContractorID *string               `json:"general_contractor_id,omitempty"`
+	ContactPersonID     *string               `json:"contact_person_id,omitempty"`
+	Status              *models.ProjectStatus `json:"status,omitempty"`
 }
 
 // ProjectHandler обработчик проектов
@@ -71,7 +72,7 @@ func (h *ProjectHandler) ListProjects(c *gin.Context) {
 
 	// Получаем company_id из контекста пользователя
 	userID := c.GetString("user_id")
-	
+
 	// Получаем пользователя для определения company_id
 	var user models.User
 	if err := h.db.Where("id = ?", userID).First(&user).Error; err != nil {
@@ -155,7 +156,7 @@ func (h *ProjectHandler) CreateProject(c *gin.Context) {
 
 	// Получаем user_id из контекста пользователя
 	userID := c.GetString("user_id")
-	
+
 	// Получаем пользователя для проверки компании
 	var user models.User
 	if err := h.db.Where("id = ?", userID).First(&user).Error; err != nil {
@@ -188,16 +189,16 @@ func (h *ProjectHandler) CreateProject(c *gin.Context) {
 
 	// Создаем проект
 	project := models.Project{
-		CompanyID:            req.CompanyID,
-		Name:                 req.Name,
-		Address:              req.Address,
-		ContractNumber:       req.ContractNumber,
-		ContractDate:         contractDate,
-		Description:          req.Description,
-		CustomerID:           req.CustomerID,
-		GeneralContractorID:  req.GeneralContractorID,
-		ContactPersonID:      req.ContactPersonID,
-		Status:               req.Status,
+		CompanyID:           req.CompanyID,
+		Name:                req.Name,
+		Address:             req.Address,
+		ContractNumber:      req.ContractNumber,
+		ContractDate:        contractDate,
+		Description:         *req.Description,
+		CustomerID:          req.CustomerID,
+		GeneralContractorID: req.GeneralContractorID,
+		ContactPersonID:     req.ContactPersonID,
+		Status:              req.Status,
 	}
 
 	if err := h.db.Create(&project).Error; err != nil {
@@ -232,7 +233,7 @@ func (h *ProjectHandler) GetProject(c *gin.Context) {
 
 	// Получаем user_id из контекста пользователя
 	userID := c.GetString("user_id")
-	
+
 	// Получаем пользователя для определения доступа
 	var user models.User
 	if err := h.db.Where("id = ?", userID).First(&user).Error; err != nil {
@@ -293,7 +294,7 @@ func (h *ProjectHandler) UpdateProject(c *gin.Context) {
 
 	// Получаем user_id из контекста пользователя
 	userID := c.GetString("user_id")
-	
+
 	// Получаем пользователя для определения доступа
 	var user models.User
 	if err := h.db.Where("id = ?", userID).First(&user).Error; err != nil {
@@ -404,7 +405,7 @@ func (h *ProjectHandler) DeleteProject(c *gin.Context) {
 
 	// Получаем user_id из контекста пользователя
 	userID := c.GetString("user_id")
-	
+
 	// Получаем пользователя для определения доступа
 	var user models.User
 	if err := h.db.Where("id = ?", userID).First(&user).Error; err != nil {

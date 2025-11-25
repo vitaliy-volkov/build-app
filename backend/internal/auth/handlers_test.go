@@ -1,16 +1,19 @@
 package auth
 
 import (
+	"bytes"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 	"time"
 
+	"stroy-control-backend/internal/config"
+	"stroy-control-backend/internal/models"
+
 	"github.com/gin-gonic/gin"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
-	"stroy-control-backend/internal/config"
-	"stroy-control-backend/internal/models"
 )
 
 // TestSetup структура для настройки тестов
@@ -18,6 +21,7 @@ type TestSetup struct {
 	db     *gorm.DB
 	auth   *AuthHandler
 	config *config.Config
+	// Remove unused variables
 }
 
 // SetupTest настройка тестовой среды
@@ -28,8 +32,13 @@ func SetupTest() *TestSetup {
 		panic("failed to connect database")
 	}
 
-	// Мигрируем модели
-	db.AutoMigrate(&models.User{})
+	// Мигрируем все модели
+	db.AutoMigrate(
+		&models.User{},
+		&models.Company{},
+		&models.Project{},
+		&models.ProjectMember{},
+	)
 
 	// Создаем тестовую конфигурацию
 	cfg := &config.Config{
@@ -47,14 +56,18 @@ func SetupTest() *TestSetup {
 			SSLMode:  "disable",
 		},
 		JWT: config.JWTConfig{
-			Secret:           "test-jwt-secret",
-			AccessTokenTTL:   15 * time.Minute,
-			RefreshTokenTTL:  7 * 24 * time.Hour,
-			Issuer:           "test-issuer",
+			Secret:          "test-jwt-secret",
+			AccessTokenTTL:  15 * time.Minute,
+			RefreshTokenTTL: 7 * 24 * time.Hour,
+			Issuer:          "test-issuer",
 		},
 		Redis: config.RedisConfig{
 			Host: "localhost",
 			Port: 6379,
+		},
+		AI: config.AIConfig{
+			GatewayURL: "https://api.openai.com/v1",
+			APIKey:     "test-key",
 		},
 	}
 
@@ -74,7 +87,7 @@ func SetupTest() *TestSetup {
 // TestLoginSuccess тест успешной аутентификации
 func TestLoginSuccess(t *testing.T) {
 	setup := SetupTest()
-	defer setup.db.Close()
+	// defer setup.db.Close() // GORM DB doesn't have Close method
 
 	// Создаем тестового пользователя
 	hashedPassword, err := models.HashPassword("TestPassword123")
@@ -94,26 +107,19 @@ func TestLoginSuccess(t *testing.T) {
 		t.Fatalf("Failed to create test user: %v", err)
 	}
 
-	// Создаем тестовый запрос
-	reqBody := `{"email":"test@example.com","password":"TestPassword123"}`
-	req, _ := http.NewRequest("POST", "/api/v1/auth/login", nil)
-	req.Header.Set("Content-Type", "application/json")
-	req.Body = http.NoBody // Mocking - в реальном тесте нужно использовать http.Request.Body
-
 	// Создаем Gin контекст для тестирования
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
-	c.Request = req
 
-	// Устанавливаем JSON данные в контекст
-	var loginReq LoginRequest
-	if err := c.ShouldBindJSON(&loginReq); err != nil {
-		t.Errorf("ShouldBindJSON failed: %v", err)
+	// Создаем JSON запрос
+	loginReq := LoginRequest{
+		Email:    "test@example.com",
+		Password: "TestPassword123",
 	}
 
-	// Устанавливаем правильные данные
-	loginReq.Email = "test@example.com"
-	loginReq.Password = "TestPassword123"
+	jsonData, _ := json.Marshal(loginReq)
+	c.Request, _ = http.NewRequest("POST", "/auth/login", bytes.NewBuffer(jsonData))
+	c.Request.Header.Set("Content-Type", "application/json")
 
 	// Выполняем тест
 	setup.auth.Login(c)
@@ -131,7 +137,7 @@ func TestLoginSuccess(t *testing.T) {
 // TestLoginInvalidCredentials тест аутентификации с неверными данными
 func TestLoginInvalidCredentials(t *testing.T) {
 	setup := SetupTest()
-	defer setup.db.Close()
+	// defer setup.db.Close() // GORM DB doesn't have Close method
 
 	// Создаем тестового пользователя
 	hashedPassword, err := models.HashPassword("CorrectPassword123")
@@ -151,18 +157,17 @@ func TestLoginInvalidCredentials(t *testing.T) {
 		t.Fatalf("Failed to create test user: %v", err)
 	}
 
-	// Создаем тестовый запрос с неверным паролем
-	reqBody := `{"email":"test@example.com","password":"WrongPassword123"}`
-	req, _ := http.NewRequest("POST", "/api/v1/auth/login", nil)
-	req.Header.Set("Content-Type", "application/json")
-
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
-	c.Request = req
 
-	var loginReq LoginRequest
-	loginReq.Email = "test@example.com"
-	loginReq.Password = "WrongPassword123"
+	loginReq := LoginRequest{
+		Email:    "test@example.com",
+		Password: "WrongPassword123",
+	}
+
+	jsonData, _ := json.Marshal(loginReq)
+	c.Request, _ = http.NewRequest("POST", "/auth/login", bytes.NewBuffer(jsonData))
+	c.Request.Header.Set("Content-Type", "application/json")
 
 	setup.auth.Login(c)
 
@@ -179,28 +184,21 @@ func TestLoginInvalidCredentials(t *testing.T) {
 // TestRegisterSuccess тест успешной регистрации
 func TestRegisterSuccess(t *testing.T) {
 	setup := SetupTest()
-	defer setup.db.Close()
-
-	// Создаем тестовый запрос регистрации
-	reqBody := `{
-		"email":"newuser@example.com",
-		"name":"New User",
-		"password":"NewPassword123",
-		"role":"user"
-	}`
-
-	req, _ := http.NewRequest("POST", "/api/v1/auth/register", nil)
-	req.Header.Set("Content-Type", "application/json")
+	// defer setup.db.Close() // GORM DB doesn't have Close method
 
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
-	c.Request = req
 
-	var registerReq RegisterRequest
-	registerReq.Email = "newuser@example.com"
-	registerReq.Name = "New User"
-	registerReq.Password = "NewPassword123"
-	registerReq.Role = models.RoleUser
+	registerReq := RegisterRequest{
+		Email:    "newuser@example.com",
+		Name:     "New User",
+		Password: "NewPassword123",
+		Role:     models.RoleUser,
+	}
+
+	jsonData, _ := json.Marshal(registerReq)
+	c.Request, _ = http.NewRequest("POST", "/auth/register", bytes.NewBuffer(jsonData))
+	c.Request.Header.Set("Content-Type", "application/json")
 
 	setup.auth.Register(c)
 
@@ -227,28 +225,21 @@ func TestRegisterSuccess(t *testing.T) {
 // TestRegisterInvalidEmail тест регистрации с неверным email
 func TestRegisterInvalidEmail(t *testing.T) {
 	setup := SetupTest()
-	defer setup.db.Close()
-
-	// Создаем тестовый запрос с неверным email
-	reqBody := `{
-		"email":"invalid-email",
-		"name":"New User",
-		"password":"NewPassword123",
-		"role":"user"
-	}`
-
-	req, _ := http.NewRequest("POST", "/api/v1/auth/register", nil)
-	req.Header.Set("Content-Type", "application/json")
+	// defer setup.db.Close() // GORM DB doesn't have Close method
 
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
-	c.Request = req
 
-	var registerReq RegisterRequest
-	registerReq.Email = "invalid-email"
-	registerReq.Name = "New User"
-	registerReq.Password = "NewPassword123"
-	registerReq.Role = models.RoleUser
+	registerReq := RegisterRequest{
+		Email:    "invalid-email",
+		Name:     "New User",
+		Password: "NewPassword123",
+		Role:     models.RoleUser,
+	}
+
+	jsonData, _ := json.Marshal(registerReq)
+	c.Request, _ = http.NewRequest("POST", "/auth/register", bytes.NewBuffer(jsonData))
+	c.Request.Header.Set("Content-Type", "application/json")
 
 	setup.auth.Register(c)
 
@@ -265,28 +256,21 @@ func TestRegisterInvalidEmail(t *testing.T) {
 // TestRegisterWeakPassword тест регистрации со слабым паролем
 func TestRegisterWeakPassword(t *testing.T) {
 	setup := SetupTest()
-	defer setup.db.Close()
-
-	// Создаем тестовый запрос со слабым паролем
-	reqBody := `{
-		"email":"test@example.com",
-		"name":"New User",
-		"password":"weak",
-		"role":"user"
-	}`
-
-	req, _ := http.NewRequest("POST", "/api/v1/auth/register", nil)
-	req.Header.Set("Content-Type", "application/json")
+	// defer setup.db.Close() // GORM DB doesn't have Close method
 
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
-	c.Request = req
 
-	var registerReq RegisterRequest
-	registerReq.Email = "test@example.com"
-	registerReq.Name = "New User"
-	registerReq.Password = "weak"
-	registerReq.Role = models.RoleUser
+	registerReq := RegisterRequest{
+		Email:    "test@example.com",
+		Name:     "New User",
+		Password: "weakpass", // At least 8 chars but doesn't meet security requirements
+		Role:     models.RoleUser,
+	}
+
+	jsonData, _ := json.Marshal(registerReq)
+	c.Request, _ = http.NewRequest("POST", "/auth/register", bytes.NewBuffer(jsonData))
+	c.Request.Header.Set("Content-Type", "application/json")
 
 	setup.auth.Register(c)
 
@@ -302,9 +286,9 @@ func TestRegisterWeakPassword(t *testing.T) {
 
 // Helper функция для проверки содержимого строки
 func Contains(str, substr string) bool {
-	return len(str) >= len(substr) && (len(substr) == 0 || str != "" && substr != "" && len(str) >= len(substr) && 
-		(str == substr || len(str) > len(substr) && (str[:len(substr)] == substr || str[len(str)-len(substr):] == substr || 
-		containsInMiddle(str, substr))))
+	return len(str) >= len(substr) && (len(substr) == 0 || str != "" && substr != "" && len(str) >= len(substr) &&
+		(str == substr || len(str) > len(substr) && (str[:len(substr)] == substr || str[len(str)-len(substr):] == substr ||
+			containsInMiddle(str, substr))))
 }
 
 func containsInMiddle(str, substr string) bool {
@@ -319,7 +303,7 @@ func containsInMiddle(str, substr string) bool {
 // Benchmark для производительности тестов
 func BenchmarkLogin(b *testing.B) {
 	setup := SetupTest()
-	defer setup.db.Close()
+	// defer setup.db.Close() // GORM DB doesn't have Close method
 
 	// Создаем тестового пользователя
 	hashedPassword, _ := models.HashPassword("TestPassword123")
@@ -337,9 +321,14 @@ func BenchmarkLogin(b *testing.B) {
 		w := httptest.NewRecorder()
 		c, _ := gin.CreateTestContext(w)
 
-		var loginReq LoginRequest
-		loginReq.Email = "test@example.com"
-		loginReq.Password = "TestPassword123"
+		loginReq := LoginRequest{
+			Email:    "test@example.com",
+			Password: "TestPassword123",
+		}
+
+		jsonData, _ := json.Marshal(loginReq)
+		c.Request, _ = http.NewRequest("POST", "/auth/login", bytes.NewBuffer(jsonData))
+		c.Request.Header.Set("Content-Type", "application/json")
 
 		setup.auth.Login(c)
 	}

@@ -1,0 +1,194 @@
+# Production Configuration for Строительная система управления
+# Этот файл содержит production-ready настройки для развертывания системы
+
+server:
+  port: 8080
+  read_timeout: 30s
+  write_timeout: 30s
+  # Production сервер должен работать на всех интерфейсах
+  host: "0.0.0.0"
+
+database:
+  host: postgres
+  port: 5432
+  user: stroy_user
+  password: secure_production_password_change_me
+  dbname: stroy_control
+  ssl_mode: require
+  # Production настройки пула соединений
+  max_idle_connections: 25
+  max_open_connections: 100
+  conn_max_lifetime: 5m
+  # Включаем детальное логирование для production
+  debug: false
+
+jwt:
+  secret: super_secret_jwt_key_minimum_32_characters_for_production_security
+  access_token_ttl: 15m      # 15 минут
+  refresh_token_ttl: 168h    # 7 дней
+  issuer: stroy-control-backend
+
+redis:
+  host: redis
+  port: 6379
+  password: secure_redis_password_change_me
+  db: 0
+  # Production настройки Redis
+  pool_size: 25
+  min_idle_connections: 5
+  dial_timeout: 5s
+  read_timeout: 3s
+  write_timeout: 3s
+
+# Приложение
+app:
+  env: production
+  debug: false
+  log_level: info
+  log_format: json
+
+# CORS настройки для production
+cors:
+  allowed_origins:
+    - https://yourdomain.com
+    - https://app.yourdomain.com
+  allowed_methods:
+    - GET
+    - POST
+    - PUT
+    - DELETE
+    - OPTIONS
+  allowed_headers:
+    - Origin
+    - Content-Type
+    - Accept
+    - Authorization
+  exposed_headers:
+    - X-RateLimit-Limit
+    - X-RateLimit-Remaining
+
+# Rate Limiting
+rate_limiting:
+  enabled: true
+  requests_per_minute: 60
+  burst: 10
+  # Разные лимиты для разных ролей
+  per_role:
+    admin: 1000
+    manager: 500
+    user: 100
+    anonymous: 20
+
+# Загрузка файлов
+file_upload:
+  max_file_size: 52428800  # 50MB в байтах
+  upload_path: /app/uploads
+  allowed_types:
+    - pdf
+    - jpg
+    - jpeg
+    - png
+    - doc
+    - docx
+  # MinIO/S3 настройки
+  storage_backend: minio
+  minio:
+    endpoint: minio:9000
+    access_key: minioadmin
+    secret_key: minioadmin
+    use_ssl: false
+    bucket_name: stroy-documents
+
+# Мониторинг
+monitoring:
+  enabled: true
+  metrics_port: 9090
+  health_check_interval: 30s
+  # Метрики для Prometheus
+  metrics:
+    enabled: true
+    path: /metrics
+
+# Безопасность
+security:
+  bcrypt_cost: 12
+  secure_cookies: true
+  trust_proxy_headers: false
+  # Заголовки безопасности
+  headers:
+    x_content_type_options: nosniff
+    x_frame_options: DENY
+    x_xss_protection: "1; mode=block"
+    content_security_policy: "default-src 'self'"
+
+# Email уведомления
+email:
+  smtp_host: smtp.gmail.com
+  smtp_port: 587
+  smtp_username: your-email@gmail.com
+  smtp_password: your-app-password
+  from_address: noreply@yourdomain.com
+  from_name: Строительная система управления
+
+# AI Integration (для будущей интеграции)
+ai:
+  gateway_url: http://ai-gateway:8000
+  timeout: 30s
+  retry_attempts: 3
+  # Настройки для разных AI провайдеров
+  providers:
+    openai:
+      enabled: false
+      api_key: ""
+      base_url: "https://api.openai.com/v1"
+    gemini:
+      enabled: false
+      api_key: ""
+    claude:
+      enabled: false
+      api_key: ""
+
+# Уведомления
+notifications:
+  enabled: true
+  # WebSocket для real-time уведомлений
+  websocket:
+    enabled: true
+    path: /ws
+    # Buffer для offline уведомлений
+    buffer_size: 1000
+  # Push уведомления
+  push:
+    enabled: false
+    vapid_public_key: ""
+    vapid_private_key: ""
+
+# Логирование
+logging:
+  level: info
+  format: json
+  output: stdout
+  # Ротация логов
+  rotation:
+    enabled: true
+    max_size: 100MB
+    max_age: 30
+    max_backups: 10
+
+# Кэширование
+cache:
+  enabled: true
+  default_ttl: 1h
+  # Кэш для разных типов данных
+  layers:
+    session: 24h
+    user_permissions: 1h
+    project_cache: 30m
+    estimate_cache: 15m
+
+# Backup настройки
+backup:
+  enabled: true
+  schedule: "0 2 * * *"  # Каждый день в 2:00
+  retention_days: 30
+  s3_bucket: stroy-backups

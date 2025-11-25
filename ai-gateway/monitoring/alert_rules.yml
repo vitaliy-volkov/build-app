@@ -1,0 +1,205 @@
+groups:
+  - name: ai_gateway_alerts
+    rules:
+      # High response time alerts
+      - alert: HighResponseTime
+        expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) > 0.5
+        for: 2m
+        labels:
+          severity: warning
+          service: ai-gateway
+        annotations:
+          summary: "High response time detected"
+          description: "95th percentile response time is {{ $value }}s for {{ $labels.endpoint }}"
+
+      - alert: CriticalResponseTime
+        expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) > 2.0
+        for: 1m
+        labels:
+          severity: critical
+          service: ai-gateway
+        annotations:
+          summary: "Critical response time detected"
+          description: "95th percentile response time is {{ $value }}s for {{ $labels.endpoint }}"
+
+      # Error rate alerts
+      - alert: HighErrorRate
+        expr: rate(http_requests_total{status=~"5.."}[5m]) / rate(http_requests_total[5m]) > 0.01
+        for: 2m
+        labels:
+          severity: warning
+          service: ai-gateway
+        annotations:
+          summary: "High error rate detected"
+          description: "Error rate is {{ $value | humanizePercentage }} for {{ $labels.endpoint }}"
+
+      - alert: CriticalErrorRate
+        expr: rate(http_requests_total{status=~"5.."}[5m]) / rate(http_requests_total[5m]) > 0.05
+        for: 1m
+        labels:
+          severity: critical
+          service: ai-gateway
+        annotations:
+          summary: "Critical error rate detected"
+          description: "Error rate is {{ $value | humanizePercentage }} for {{ $labels.endpoint }}"
+
+      # OpenAI API alerts
+      - alert: OpenAIAPICostHigh
+        expr: increase(openai_api_cost_total[1h]) > 50
+        for: 5m
+        labels:
+          severity: warning
+          service: ai-gateway
+        annotations:
+          summary: "High OpenAI API cost"
+          description: "OpenAI API cost in last hour: ${{ $value }}"
+
+      - alert: OpenAIAPILatencyHigh
+        expr: histogram_quantile(0.95, rate(openai_request_duration_seconds_bucket[5m])) > 10
+        for: 3m
+        labels:
+          severity: warning
+          service: ai-gateway
+        annotations:
+          summary: "High OpenAI API latency"
+          description: "95th percentile OpenAI API response time is {{ $value }}s"
+
+      - alert: OpenAIAPIErrorRate
+        expr: rate(openai_requests_total{status="error"}[5m]) / rate(openai_requests_total[5m]) > 0.1
+        for: 2m
+        labels:
+          severity: warning
+          service: ai-gateway
+        annotations:
+          summary: "High OpenAI API error rate"
+          description: "OpenAI API error rate is {{ $value | humanizePercentage }}"
+
+      # Cache performance alerts
+      - alert: CacheHitRateLow
+        expr: redis_cache_hit_rate < 0.7
+        for: 5m
+        labels:
+          severity: warning
+          service: ai-gateway
+        annotations:
+          summary: "Low cache hit rate"
+          description: "Redis cache hit rate is {{ $value | humanizePercentage }}"
+
+      - alert: RedisMemoryHigh
+        expr: redis_memory_used_bytes / redis_memory_max_bytes > 0.9
+        for: 5m
+        labels:
+          severity: warning
+          service: ai-gateway
+        annotations:
+          summary: "Redis memory usage high"
+          description: "Redis memory usage is {{ $value | humanizePercentage }}"
+
+      # Resource usage alerts
+      - alert: HighCPUUsage
+        expr: rate(container_cpu_usage_seconds_total[5m]) * 100 > 80
+        for: 5m
+        labels:
+          severity: warning
+          service: ai-gateway
+        annotations:
+          summary: "High CPU usage"
+          description: "CPU usage is {{ $value }}% for pod {{ $labels.pod }}"
+
+      - alert: CriticalCPUUsage
+        expr: rate(container_cpu_usage_seconds_total[5m]) * 100 > 95
+        for: 2m
+        labels:
+          severity: critical
+          service: ai-gateway
+        annotations:
+          summary: "Critical CPU usage"
+          description: "CPU usage is {{ $value }}% for pod {{ $labels.pod }}"
+
+      - alert: HighMemoryUsage
+        expr: container_memory_usage_bytes / container_spec_memory_limit_bytes * 100 > 85
+        for: 5m
+        labels:
+          severity: warning
+          service: ai-gateway
+        annotations:
+          summary: "High memory usage"
+          description: "Memory usage is {{ $value }}% for pod {{ $labels.pod }}"
+
+      - alert: CriticalMemoryUsage
+        expr: container_memory_usage_bytes / container_spec_memory_limit_bytes * 100 > 95
+        for: 2m
+        labels:
+          severity: critical
+          service: ai-gateway
+        annotations:
+          summary: "Critical memory usage"
+          description: "Memory usage is {{ $value }}% for pod {{ $labels.pod }}"
+
+      # Pod restart alerts
+      - alert: PodRestartHigh
+        expr: increase(kube_pod_container_status_restarts_total[1h]) > 3
+        for: 0m
+        labels:
+          severity: warning
+          service: ai-gateway
+        annotations:
+          summary: "Pod restarting frequently"
+          description: "Pod {{ $labels.pod }} has restarted {{ $value }} times in the last hour"
+
+      # Service availability alerts
+      - alert: ServiceDown
+        expr: up == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: ai-gateway
+        annotations:
+          summary: "Service is down"
+          description: "Service {{ $labels.job }} on {{ $labels.instance }} is down"
+
+      # Rate limiting alerts
+      - alert: RateLimitHigh
+        expr: rate(http_requests_total{status="429"}[5m]) / rate(http_requests_total[5m]) > 0.1
+        for: 2m
+        labels:
+          severity: warning
+          service: ai-gateway
+        annotations:
+          summary: "High rate limiting"
+          description: "Rate limiting affecting {{ $value | humanizePercentage }} of requests"
+
+  - name: business_metrics
+    rules:
+      # Daily active users
+      - alert: LowActiveUsers
+        expr: daily_active_users < 10
+        for: 10m
+        labels:
+          severity: warning
+          service: ai-gateway
+        annotations:
+          summary: "Low number of active users"
+          description: "Only {{ $value }} active users in last 24 hours"
+
+      # Feature usage alerts
+      - alert: LowFeatureUsage
+        expr: rate(ai_feature_usage_total[1h]) < 0.1
+        for: 30m
+        labels:
+          severity: info
+          service: ai-gateway
+        annotations:
+          summary: "Low feature usage"
+          description: "Feature {{ $labels.feature }} usage rate: {{ $value }}/hour"
+
+      # Cost alerts
+      - alert: HighDailyCost
+        expr: increase(openai_api_cost_total[24h]) > 200
+        for: 5m
+        labels:
+          severity: warning
+          service: ai-gateway
+        annotations:
+          summary: "High daily cost"
+          description: "Daily OpenAI API cost: ${{ $value }}"

@@ -4,9 +4,10 @@ import (
 	"net/http"
 	"time"
 
+	"stroy-control-backend/internal/models"
+
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
-	"stroy-control-backend/internal/models"
 )
 
 // @Summary Login user
@@ -27,12 +28,12 @@ type LoginRequest struct {
 }
 
 type RegisterRequest struct {
-	Email     string           `json:"email" binding:"required,email"`
-	Name      string           `json:"name" binding:"required,min=2,max=255"`
-	Password  string           `json:"password" binding:"required,min=8"`
-	Role      models.UserRole  `json:"role" binding:"required"`
-	CompanyID *string          `json:"company_id,omitempty"`
-	Phone     *string          `json:"phone,omitempty"`
+	Email     string          `json:"email" binding:"required,email"`
+	Name      string          `json:"name" binding:"required,min=2,max=255"`
+	Password  string          `json:"password" binding:"required,min=8"`
+	Role      models.UserRole `json:"role" binding:"required"`
+	CompanyID *string         `json:"company_id,omitempty"`
+	Phone     *string         `json:"phone,omitempty"`
 }
 
 type RefreshTokenRequest struct {
@@ -196,13 +197,21 @@ func (h *AuthHandler) Register(c *gin.Context) {
 
 	// Создаем пользователя
 	user := models.User{
-		Email:     req.Email,
-		Name:      req.Name,
-		Password:  hashedPassword,
-		Role:      req.Role,
-		CompanyID: req.CompanyID,
-		Phone:     req.Phone,
-		IsActive:  true,
+		Email:    req.Email,
+		Name:     req.Name,
+		Password: hashedPassword,
+		Role:     req.Role,
+		IsActive: true,
+	}
+
+	// Устанавливаем CompanyID только если он предоставлен
+	if req.CompanyID != nil {
+		user.CompanyID = *req.CompanyID
+	}
+
+	// Устанавливаем Phone только если он предоставлен
+	if req.Phone != nil {
+		user.Phone = req.Phone
 	}
 
 	if err := h.db.Create(&user).Error; err != nil {
@@ -302,7 +311,7 @@ func (h *AuthHandler) RefreshToken(c *gin.Context) {
 func (h *AuthHandler) Logout(c *gin.Context) {
 	// В реальном приложении здесь можно добавить токен в черный список
 	// пока что просто возвращаем успешный ответ
-	
+
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "Logout successful",
@@ -358,7 +367,7 @@ func (h *AuthHandler) Me(c *gin.Context) {
 				"role":       user.Role,
 				"company_id": user.CompanyID,
 				"company": func() gin.H {
-					if user.CompanyID != nil {
+					if user.Company.ID != "" {
 						return gin.H{
 							"id":   user.Company.ID,
 							"name": user.Company.Name,
@@ -366,8 +375,8 @@ func (h *AuthHandler) Me(c *gin.Context) {
 					}
 					return nil
 				}(),
-				"phone":      user.Phone,
-				"avatar_url": user.AvatarURL,
+				"phone":         user.Phone,
+				"avatar_url":    user.AvatarURL,
 				"last_login_at": user.LastLoginAt,
 				"created_at":    user.CreatedAt,
 			},

@@ -1,0 +1,385 @@
+version: '3.8'
+
+services:
+  # Основное приложение Backend (Go) - Production Ready
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: stroy-control-backend
+    restart: unless-stopped
+    env_file:
+      - .env.production
+      - .secrets  # Load sensitive environment variables
+    ports:
+      - "8080:8080"
+      - "9090:9090"  # Metrics port
+    volumes:
+      - backend_uploads:/app/uploads
+      - backend_logs:/app/logs
+      - backend_backups:/app/backups
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    networks:
+      - stroy-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    # Resource limits for production
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: "1.0"
+        reservations:
+          memory: 512M
+          cpus: "0.5"
+    # Security options
+    security_opt:
+      - no-new-privileges:true
+    # Read-only root filesystem (add specific writable paths)
+    tmpfs:
+      - /tmp:noexec,nosuid,size=100m
+    user: "1000:1000"
+
+  # PostgreSQL база данных
+  postgres:
+    image: postgres:15-alpine
+    container_name: stroy-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: stroy_control
+      POSTGRES_USER: stroy_user
+      POSTGRES_PASSWORD: secure_production_password_change_me
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --locale=C"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./migrations:/docker-entrypoint-initdb.d
+    ports:
+      - "5432:5432"
+    networks:
+      - stroy-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U stroy_user -d stroy_control"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Redis для кэширования и сессий
+  redis:
+    image: redis:7-alpine
+    container_name: stroy-redis
+    restart: unless-stopped
+    command: redis-server --requirepass secure_redis_password_change_me --appendonly yes
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    networks:
+      - stroy-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # MinIO для хранения файлов (альтернатива S3)
+  minio:
+    image: minio/minio:latest
+    container_name: stroy-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    volumes:
+      - minio_data:/data
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    networks:
+      - stroy-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Nginx как reverse proxy и статических файлов
+  nginx:
+    image: nginx:alpine
+    container_name: stroy-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+      - ./frontend/dist:/usr/share/nginx/html:ro
+    depends_on:
+      - backend
+    networks:
+      - stroy-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Prometheus для мониторинга
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: stroy-prometheus
+    restart: unless-stopped
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    ports:
+      - "9091:9090"
+    networks:
+      - stroy-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Grafana для визуализации метрик
+  grafana:
+    image: grafana/grafana:latest
+    container_name: stroy-grafana
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: admin_password_change_me
+      GF_USERS_ALLOW_SIGN_UP: false
+      GF_INSTALL_PLUGINS: grafana-clock-panel,grafana-simple-json-datasource
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+    ports:
+      - "3000:3000"
+    networks:
+      - stroy-network
+    depends_on:
+      - prometheus
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ELK Stack для логирования
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.8.0
+    container_name: stroy-elasticsearch
+    restart: unless-stopped
+    environment:
+      - discovery.type=single-node
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      - xpack.security.enabled=false
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    networks:
+      - stroy-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  logstash:
+    image: docker.elastic.co/logstash/logstash:8.8.0
+    container_name: stroy-logstash
+    restart: unless-stopped
+    volumes:
+      - ./monitoring/logstash/pipeline:/usr/share/logstash/pipeline:ro
+    ports:
+      - "5044:5044"
+      - "5000:5000/tcp"
+      - "5000:5000/udp"
+      - "9600:9600"
+    networks:
+      - stroy-network
+    depends_on:
+      - elasticsearch
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.8.0
+    container_name: stroy-kibana
+    restart: unless-stopped
+    environment:
+      ELASTICSEARCH_HOSTS: http://elasticsearch:9200
+    ports:
+      - "5601:5601"
+    networks:
+      - stroy-network
+    depends_on:
+      - elasticsearch
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # AI Gateway (Python FastAPI) - Production Ready
+  ai-gateway:
+    build:
+      context: ../ai-gateway
+      dockerfile: Dockerfile
+    container_name: stroy-ai-gateway
+    restart: unless-stopped
+    env_file:
+      - .env.production
+      - .secrets  # Load sensitive environment variables
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - GROQ_API_KEY=${GROQ_API_KEY:-}
+      - REDIS_URL=redis://:${REDIS_PASSWORD:-}@redis:6379/1
+      - CACHE_TTL=3600
+      - ENABLE_METRICS=true
+      - METRICS_PORT=9091
+      - LOG_LEVEL=info
+    ports:
+      - "8000:8000"
+      - "9091:9091"  # AI Gateway metrics
+    volumes:
+      - ai_gateway_logs:/app/logs
+      - ai_gateway_cache:/app/cache
+    networks:
+      - stroy-network
+    depends_on:
+      - redis
+      - backend
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    # Resource limits for production
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: "1.0"
+        reservations:
+          memory: 512M
+          cpus: "0.5"
+
+volumes:
+  postgres_data:
+    driver: local
+    driver_opts:
+      type: none
+      device: /opt/stroy-control/postgres
+      o: bind
+  redis_data:
+    driver: local
+    driver_opts:
+      type: none
+      device: /opt/stroy-control/redis
+      o: bind
+  minio_data:
+    driver: local
+    driver_opts:
+      type: none
+      device: /opt/stroy-control/minio
+      o: bind
+  backend_uploads:
+    driver: local
+    driver_opts:
+      type: none
+      device: /opt/stroy-control/uploads
+      o: bind
+  backend_logs:
+    driver: local
+    driver_opts:
+      type: none
+      device: /opt/stroy-control/logs/backend
+      o: bind
+  backend_backups:
+    driver: local
+    driver_opts:
+      type: none
+      device: /opt/stroy-control/backups
+      o: bind
+  ai_gateway_logs:
+    driver: local
+    driver_opts:
+      type: none
+      device: /opt/stroy-control/logs/ai-gateway
+      o: bind
+  ai_gateway_cache:
+    driver: local
+    driver_opts:
+      type: none
+      device: /opt/stroy-control/cache/ai-gateway
+      o: bind
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local
+  elasticsearch_data:
+    driver: local
+    driver_opts:
+      type: none
+      device: /opt/stroy-control/elasticsearch
+      o: bind
+
+networks:
+  stroy-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16

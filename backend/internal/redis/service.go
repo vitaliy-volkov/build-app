@@ -2,10 +2,12 @@ package redis
 
 import (
 	"context"
+	"fmt"
 	"time"
 
-	"github.com/go-redis/redis/v8"
 	"stroy-control-backend/internal/config"
+
+	"github.com/go-redis/redis/v8"
 )
 
 // RedisService сервис для работы с Redis
@@ -34,11 +36,11 @@ func (r *RedisService) HealthCheck() error {
 	if err != nil {
 		return err
 	}
-	
+
 	if pong != "PONG" {
-		return redis.NewError("unexpected ping response")
+		return fmt.Errorf("unexpected ping response: %s", pong)
 	}
-	
+
 	return nil
 }
 
@@ -47,33 +49,33 @@ func (r *RedisService) HealthCheck() error {
 // IsRateLimited проверяет, ограничен ли запрос для ключа
 func (r *RedisService) IsRateLimited(key string, limit int, window time.Duration) (bool, error) {
 	pipe := r.client.Pipeline()
-	
+
 	// Получаем текущий счетчик
 	get := pipe.Get(r.ctx, r.getRateLimitKey(key))
-	
+
 	// Устанавливаем TTL для ключа если он не существует
 	pipe.SetNX(r.ctx, r.getRateLimitKey(key), 0, window)
-	
+
 	_, err := pipe.Exec(r.ctx)
 	if err != nil && err != redis.Nil {
 		return false, err
 	}
-	
+
 	current, err := get.Result()
 	if err != nil && err != redis.Nil {
 		return false, err
 	}
-	
+
 	if err == redis.Nil {
 		// Ключ не существует, создаем его
 		current = "0"
 	}
-	
+
 	count := 0
 	if current != "" {
 		count = int(parseInt(current))
 	}
-	
+
 	return count >= limit, nil
 }
 
@@ -118,15 +120,15 @@ func (r *RedisService) getTokenBlacklistKey(tokenID string) string {
 // SaveSession сохраняет сессию в Redis
 func (r *RedisService) SaveSession(sessionID string, data map[string]interface{}, ttl time.Duration) error {
 	pipe := r.client.Pipeline()
-	
+
 	// Сохраняем данные сессии
 	for key, value := range data {
 		pipe.HSet(r.ctx, r.getSessionKey(sessionID), key, value)
 	}
-	
+
 	// Устанавливаем TTL
 	pipe.Expire(r.ctx, r.getSessionKey(sessionID), ttl)
-	
+
 	_, err := pipe.Exec(r.ctx)
 	return err
 }
@@ -164,4 +166,9 @@ func parseInt(s string) int {
 // Close закрывает соединение с Redis
 func (r *RedisService) Close() error {
 	return r.client.Close()
+}
+
+// GetClient возвращает клиент Redis для использования в других сервисах
+func (r *RedisService) GetClient() *redis.Client {
+	return r.client
 }

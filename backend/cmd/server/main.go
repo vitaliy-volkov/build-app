@@ -10,14 +10,17 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/gin-gonic/gin"
 	"stroy-control-backend/docs"
+	"stroy-control-backend/internal/ai"
 	"stroy-control-backend/internal/auth"
 	"stroy-control-backend/internal/company"
 	"stroy-control-backend/internal/config"
 	"stroy-control-backend/internal/middleware"
 	"stroy-control-backend/internal/project"
 	"stroy-control-backend/internal/redis"
+	"stroy-control-backend/internal/services"
+
+	"github.com/gin-gonic/gin"
 )
 
 func main() {
@@ -47,7 +50,7 @@ func main() {
 
 	// Initialize JWT Service
 	jwtService := auth.NewJWTService(cfg)
-	
+
 	// Initialize Authentication Router
 	authRouter := auth.NewRouterGroup(db.GetDB(), jwtService)
 
@@ -57,22 +60,32 @@ func main() {
 	// Initialize Company Router
 	companyRouter := company.NewRouterGroup(db.GetDB(), authRouter.GetMiddleware())
 
+	// Initialize AI Service
+	aiService := services.NewAIService(
+		cfg.AI.GatewayURL,
+		cfg.AI.APIKey,
+		redisService.GetClient(),
+	)
+
+	// Initialize AI Router
+	aiRouter := ai.NewRouterGroup(aiService, authRouter.GetMiddleware().Protected())
+
 	// Set up Gin router with middleware
 	r := gin.Default()
 
 	// Initialize rate limiting middleware
 	rateLimitMiddleware := middleware.NewRateLimitMiddleware(redisService)
-	
+
 	// Add global middleware
 	r.Use(middleware.RequestIDMiddleware())
 	r.Use(middleware.LoggingMiddleware())
 	r.Use(middleware.ErrorHandlingMiddleware())
 	r.Use(middleware.SecurityHeadersMiddleware())
 	r.Use(middleware.CORSMiddleware())
-	
+
 	// Add rate limiting middleware
 	r.Use(rateLimitMiddleware.RateLimitByIP())
-	
+
 	// Add token blacklist middleware for protected routes
 	r.Use(rateLimitMiddleware.TokenBlacklistMiddleware())
 
@@ -84,6 +97,9 @@ func main() {
 
 	// Register company routes
 	companyRouter.RegisterRoutes(r)
+
+	// Register AI routes
+	aiRouter.RegisterRoutes(r)
 
 	// Initialize Swagger documentation
 	docs.InitSwagger(r)
@@ -99,7 +115,7 @@ func main() {
 			})
 			return
 		}
-		
+
 		c.JSON(http.StatusOK, gin.H{
 			"status":    "ok",
 			"database":  "connected",
@@ -118,7 +134,7 @@ func main() {
 			})
 			return
 		}
-		
+
 		c.JSON(http.StatusOK, gin.H{
 			"status": "healthy",
 			"time":   time.Now(),
@@ -145,16 +161,16 @@ func main() {
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
-	
+
 	log.Println("Shutting down server...")
-	
+
 	// Graceful shutdown with timeout
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
-	
+
 	if err := server.Shutdown(ctx); err != nil {
 		log.Fatalf("Server forced to shutdown: %v", err)
 	}
-	
+
 	log.Println("Server exited")
 }

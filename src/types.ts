@@ -733,6 +733,20 @@ export interface DesignStyleConfig {
   prompt: string; // System prompt/suffix for this style
 }
 
+export interface Company {
+  id: string;
+  name: string;
+  address?: string;
+  inn?: string;
+  kpp?: string;
+  ogrn?: string;
+  email?: string;
+  phone?: string;
+  website?: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface CompanySettings {
   name: string;
   taxId: string; // INN

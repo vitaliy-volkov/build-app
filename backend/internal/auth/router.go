@@ -1,8 +1,6 @@
 package auth
 
 import (
-	"stroy-control-backend/internal/config"
-
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 )
@@ -30,7 +28,7 @@ func (rg *RouterGroup) RegisterRoutes(r *gin.Engine) {
 		authGroup.POST("/login", rg.authHandler.Login)
 		authGroup.POST("/register", rg.authHandler.Register)
 		authGroup.POST("/refresh", rg.authHandler.RefreshToken)
-		
+
 		// Защищенные роуты (требуют аутентификации)
 		protected := authGroup.Group("/")
 		protected.Use(rg.middleware.Protected())

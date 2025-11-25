@@ -11,15 +11,7 @@ import (
 	"gorm.io/gorm/logger"
 )
 
-// DatabaseConfig конфигурация базы данных
-type DatabaseConfig struct {
-	Host     string `mapstructure:"host"`
-	Port     int    `mapstructure:"port"`
-	User     string `mapstructure:"user"`
-	Password string `mapstructure:"password"`
-	DBName   string `mapstructure:"dbname"`
-	SSLMode  string `mapstructure:"ssl_mode"`
-}
+// DatabaseConfig is now defined in config.go - this file uses the same type
 
 // GetDSN возвращает строку подключения к базе данных
 func (db *DatabaseConfig) GetDSN() string {
@@ -35,60 +27,60 @@ type Database struct {
 // ConnectDatabase устанавливает подключение к базе данных
 func ConnectDatabase(cfg *Config) (*Database, error) {
 	log.Println("Connecting to PostgreSQL database...")
-	
+
 	// Настройки GORM
 	gormConfig := &gorm.Config{
 		Logger: logger.Default.LogMode(logger.Info),
 	}
-	
+
 	// Создаем подключение
 	db, err := gorm.Open(postgres.Open(cfg.Database.GetDSN()), gormConfig)
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to database: %w", err)
 	}
-	
+
 	// Получаем underlying *sql.DB для настройки пула соединений
 	sqlDB, err := db.DB()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get sql.DB from gorm: %w", err)
 	}
-	
-	// Настройка пула соединений
-	sqlDB.SetMaxIdleConns(10)              // Максимальное количество простаивающих соединений
-	sqlDB.SetMaxOpenConns(100)             // Максимальное количество открытых соединений
-	sqlDB.SetConnMaxLifetime(30 * 60)      // Время жизни соединения в секундах (30 минут)
-	sqlDB.SetConnMaxIdleTime(5 * 60)       // Время простоя соединения перед закрытием (5 минут)
-	
+
+	// Настройка пула соединений для production
+	sqlDB.SetMaxIdleConns(25)        // Максимальное количество простаивающих соединений
+	sqlDB.SetMaxOpenConns(100)       // Максимальное количество открытых соединений
+	sqlDB.SetConnMaxLifetime(5 * 60) // Время жизни соединения в секундах (5 минут)
+
 	// Проверяем подключение
 	if err := sqlDB.Ping(); err != nil {
 		return nil, fmt.Errorf("failed to ping database: %w", err)
 	}
-	
+
 	log.Println("Database connection established successfully")
-	
+
 	// Настраиваем AutoMigrate
 	if err := setupAutoMigrate(db); err != nil {
 		return nil, fmt.Errorf("failed to setup auto migration: %w", err)
 	}
-	
+
 	return &Database{DB: db}, nil
 }
 
 // setupAutoMigrate настраивает автоматическую миграцию схемы БД
 func setupAutoMigrate(db *gorm.DB) error {
 	log.Println("Running database auto-migration...")
-	
+
+	// Используем SQL миграции вместо AutoMigrate для production
+	// Для совместимости можно оставить минимальные модели
 	err := db.AutoMigrate(
 		&models.Company{},
 		&models.User{},
 		&models.Project{},
-		&models.ProjectMember{},
 	)
-	
+
 	if err != nil {
 		return fmt.Errorf("auto migration failed: %w", err)
 	}
-	
+
 	log.Println("Database migration completed successfully")
 	return nil
 }
@@ -113,10 +105,10 @@ func (d *Database) HealthCheck() error {
 	if err != nil {
 		return fmt.Errorf("failed to get sql.DB: %w", err)
 	}
-	
+
 	if err := sqlDB.Ping(); err != nil {
 		return fmt.Errorf("database health check failed: %w", err)
 	}
-	
+
 	return nil
 }

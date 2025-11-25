@@ -3,11 +3,13 @@ package middleware
 import (
 	"crypto/rand"
 	"encoding/hex"
+	"fmt"
 	"net/http"
 	"time"
 
-	"github.com/gin-gonic/gin"
 	"stroy-control-backend/internal/models"
+
+	"github.com/gin-gonic/gin"
 )
 
 // RequestIDMiddleware middleware для генерации и установки Request ID
@@ -62,12 +64,15 @@ func LoggingMiddleware() gin.HandlerFunc {
 		}
 
 		// Возвращаем отформатированную строку
-		return gin.H{
-			"timestamp": param.TimeStamp.Format(time.RFC3339),
-			"level":     "INFO",
-			"message":   "HTTP Request",
-			"details":   log,
-		}
+		return fmt.Sprintf("[%s] %s %s %d %s %s %s\n",
+			param.TimeStamp.Format(time.RFC3339),
+			param.Method,
+			param.Path,
+			param.StatusCode,
+			param.Latency.String(),
+			param.ClientIP,
+			requestID,
+		)
 	})
 }
 
@@ -80,10 +85,10 @@ func ErrorHandlingMiddleware() gin.HandlerFunc {
 		// Проверяем на наличие ошибок
 		if len(c.Errors) > 0 {
 			// Получаем Request ID для логирования
-			requestID := "-"
-			if value, exists := c.Get("request_id"); exists {
-				requestID = value.(string)
-			}
+			// requestID := "-"
+			// if value, exists := c.Get("request_id"); exists {
+			// 	requestID = value.(string)
+			// }
 
 			// Обрабатываем каждую ошибку
 			for _, err := range c.Errors {
@@ -128,16 +133,16 @@ func ErrorHandlingMiddleware() gin.HandlerFunc {
 
 		// Если статус код >= 500, это серверная ошибка
 		if c.Writer.Status() >= http.StatusInternalServerError {
-			requestID := "-"
-			if value, exists := c.Get("request_id"); exists {
-				requestID = value.(string)
-			}
+			// requestID := "-"
+			// if value, exists := c.Get("request_id"); exists {
+			// 	requestID = value.(string)
+			// }
 
 			c.JSON(http.StatusInternalServerError, models.NewErrorResponse(
 				"Internal server error",
 				http.StatusInternalServerError,
 			))
-			
+
 			// Логируем серверную ошибку
 			// logrus.WithFields(logrus.Fields{
 			// 	"request_id":  requestID,

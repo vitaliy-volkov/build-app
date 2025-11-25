@@ -7,8 +7,8 @@ import (
 	"stroy-control-backend/internal/project"
 
 	"github.com/gin-gonic/gin"
-	"github.com/swaggo/gin-swagger"
-	"github.com/swaggo/gin-swagger/swaggerFiles"
+	// swaggerFiles "github.com/swaggo/files"
+	// ginSwagger "github.com/swaggo/gin-swagger"
 )
 
 // @title Construction Control API
@@ -35,7 +35,7 @@ import (
 // InitSwagger инициализирует Swagger документацию
 func InitSwagger(r *gin.Engine) {
 	// Swagger documentation route
-	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+	// r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 }
 
 // InitAPIHandlers регистрирует API handlers для генерации документации

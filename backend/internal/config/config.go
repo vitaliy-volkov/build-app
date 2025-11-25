@@ -12,6 +12,7 @@ type Config struct {
 	Database DatabaseConfig `mapstructure:"database"`
 	JWT      JWTConfig      `mapstructure:"jwt"`
 	Redis    RedisConfig    `mapstructure:"redis"`
+	AI       AIConfig       `mapstructure:"ai"`
 }
 
 type ServerConfig struct {
@@ -30,10 +31,10 @@ type DatabaseConfig struct {
 }
 
 type JWTConfig struct {
-	Secret           string        `mapstructure:"secret"`
-	AccessTokenTTL   time.Duration `mapstructure:"access_token_ttl"`
-	RefreshTokenTTL  time.Duration `mapstructure:"refresh_token_ttl"`
-	Issuer           string        `mapstructure:"issuer"`
+	Secret          string        `mapstructure:"secret"`
+	AccessTokenTTL  time.Duration `mapstructure:"access_token_ttl"`
+	RefreshTokenTTL time.Duration `mapstructure:"refresh_token_ttl"`
+	Issuer          string        `mapstructure:"issuer"`
 }
 
 type RedisConfig struct {
@@ -41,6 +42,11 @@ type RedisConfig struct {
 	Port     int    `mapstructure:"port"`
 	Password string `mapstructure:"password"`
 	DB       int    `mapstructure:"db"`
+}
+
+type AIConfig struct {
+	GatewayURL string `mapstructure:"gateway_url"`
+	APIKey     string `mapstructure:"api_key"`
 }
 
 func Load() (*Config, error) {
@@ -63,8 +69,8 @@ func Load() (*Config, error) {
 
 	// JWT defaults
 	viper.SetDefault("jwt.secret", "your-super-secret-jwt-key-change-in-production")
-	viper.SetDefault("jwt.access_token_ttl", 15*time.Minute)      // 15 minutes
-	viper.SetDefault("jwt.refresh_token_ttl", 7*24*time.Hour)     // 7 days
+	viper.SetDefault("jwt.access_token_ttl", 15*time.Minute)  // 15 minutes
+	viper.SetDefault("jwt.refresh_token_ttl", 7*24*time.Hour) // 7 days
 	viper.SetDefault("jwt.issuer", "stroy-control-backend")
 
 	// Redis defaults
@@ -72,6 +78,10 @@ func Load() (*Config, error) {
 	viper.SetDefault("redis.port", 6379)
 	viper.SetDefault("redis.password", "")
 	viper.SetDefault("redis.db", 0)
+
+	// AI defaults
+	viper.SetDefault("ai.gateway_url", "https://api.openai.com/v1")
+	viper.SetDefault("ai.api_key", "")
 
 	viper.AutomaticEnv()
 

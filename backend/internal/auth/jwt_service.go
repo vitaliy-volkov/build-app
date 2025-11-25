@@ -5,9 +5,10 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/golang-jwt/jwt/v5"
 	"stroy-control-backend/internal/config"
 	"stroy-control-backend/internal/models"
+
+	"github.com/golang-jwt/jwt/v5"
 )
 
 // JWTService сервис для работы с JWT токенами
@@ -25,10 +26,10 @@ type TokenPair struct {
 
 // Claims структура для JWT claims
 type Claims struct {
-	UserID   string   `json:"user_id"`
-	Email    string   `json:"email"`
-	Role     string   `json:"role"`
-	CompanyID *string `json:"company_id,omitempty"`
+	UserID    string `json:"user_id"`
+	Email     string `json:"email"`
+	Role      string `json:"role"`
+	CompanyID string `json:"company_id"`
 	jwt.RegisteredClaims
 }
 
@@ -42,12 +43,12 @@ func NewJWTService(cfg *config.Config) *JWTService {
 // GenerateTokens генерирует пару токенов для пользователя
 func (s *JWTService) GenerateTokens(user *models.User) (*TokenPair, error) {
 	now := time.Now()
-	
+
 	// Access Token (15 минут)
 	accessClaims := Claims{
-		UserID:   user.ID,
-		Email:    user.Email,
-		Role:     string(user.Role),
+		UserID:    user.ID,
+		Email:     user.Email,
+		Role:      string(user.Role),
 		CompanyID: user.CompanyID,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(now.Add(s.config.AccessTokenTTL)),
@@ -95,13 +96,13 @@ func (s *JWTService) generateToken(claims Claims) (string, error) {
 func (s *JWTService) generateRefreshToken(claims jwt.RegisteredClaims) (string, error) {
 	// Для refresh token используем упрощенную структуру
 	refreshClaims := jwt.MapClaims{
-		"sub":    claims.Subject,
-		"iss":    claims.Issuer,
-		"exp":    claims.ExpiresAt,
-		"nbf":    claims.NotBefore,
-		"iat":    claims.IssuedAt,
-		"type":   "refresh",
-		"jti":    generateJTI(),
+		"sub":  claims.Subject,
+		"iss":  claims.Issuer,
+		"exp":  claims.ExpiresAt,
+		"nbf":  claims.NotBefore,
+		"iat":  claims.IssuedAt,
+		"type": "refresh",
+		"jti":  generateJTI(),
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, refreshClaims)
