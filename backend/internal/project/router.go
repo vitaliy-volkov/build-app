@@ -25,6 +25,10 @@ func NewRouterGroup(db *gorm.DB, authMiddleware *auth.AuthMiddleware) *RouterGro
 
 // RegisterRoutes регистрирует роуты проектов
 func (rg *RouterGroup) RegisterRoutes(r *gin.Engine) {
+	// Временный публичный эндпоинт для тестирования
+	publicHandler := NewPublicHandler(rg.projectHandler.db)
+	r.GET("/api/v1/public/projects", publicHandler.ListProjectsPublic)
+
 	// Группа роутов для проектов
 	projectGroup := r.Group("/api/v1/projects")
 	projectGroup.Use(rg.middleware.Protected())

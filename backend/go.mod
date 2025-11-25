@@ -7,6 +7,7 @@ require (
 	github.com/go-redis/redis/v8 v8.11.5
 	github.com/golang-jwt/jwt/v5 v5.2.0
 	github.com/gorilla/websocket v1.5.3
+	github.com/prometheus/client_golang v1.20.3
 	github.com/spf13/viper v1.19.0
 	golang.org/x/crypto v0.36.0
 	gorm.io/driver/postgres v1.5.7

@@ -89,7 +89,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	}
 
 	// Проверяем пароль
-	if err := models.VerifyPassword(req.Password, user.Password); err != nil {
+	if err := models.VerifyPassword(req.Password, user.PasswordHash); err != nil {
 		c.JSON(http.StatusUnauthorized, models.NewErrorResponse(
 			"Invalid email or password",
 			http.StatusUnauthorized,
@@ -197,16 +197,18 @@ func (h *AuthHandler) Register(c *gin.Context) {
 
 	// Создаем пользователя
 	user := models.User{
-		Email:    req.Email,
-		Name:     req.Name,
-		Password: hashedPassword,
-		Role:     req.Role,
-		IsActive: true,
+		Email:        req.Email,
+		Name:         req.Name,
+		PasswordHash: hashedPassword,
+		Role:         req.Role,
+		IsActive:     true,
 	}
 
-	// Устанавливаем CompanyID только если он предоставлен
+	// Устанавливаем CompanyID - используем компанию по умолчанию если не указана
 	if req.CompanyID != nil {
 		user.CompanyID = *req.CompanyID
+	} else {
+		user.CompanyID = "00000000-0000-0000-0000-000000000001"
 	}
 
 	// Устанавливаем Phone только если он предоставлен
@@ -424,7 +426,7 @@ func (h *AuthHandler) ChangePassword(c *gin.Context) {
 	}
 
 	// Проверяем текущий пароль
-	if err := models.VerifyPassword(req.CurrentPassword, user.Password); err != nil {
+	if err := models.VerifyPassword(req.CurrentPassword, user.PasswordHash); err != nil {
 		c.JSON(http.StatusBadRequest, models.NewErrorResponse(
 			"Current password is incorrect",
 			http.StatusBadRequest,
@@ -453,7 +455,7 @@ func (h *AuthHandler) ChangePassword(c *gin.Context) {
 	}
 
 	// Обновляем пароль
-	if err := h.db.Model(&user).Update("password", hashedPassword).Error; err != nil {
+	if err := h.db.Model(&user).Update("password_hash", hashedPassword).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, models.NewErrorResponse(
 			"Failed to update password",
 			http.StatusInternalServerError,

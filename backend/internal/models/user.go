@@ -23,19 +23,19 @@ const (
 
 // User представляет пользователя системы
 type User struct {
-	ID          string         `json:"id" gorm:"primaryKey;type:uuid"`
-	Email       string         `json:"email" gorm:"uniqueIndex;not null;type:varchar(255)"`
-	Name        string         `json:"name" gorm:"not null;type:varchar(255)"`
-	Password    string         `json:"-" gorm:"not null;type:varchar(255)"` // не возвращается в JSON
-	Role        UserRole       `json:"role" gorm:"not null;type:varchar(50)"`
-	CompanyID   string         `json:"company_id" gorm:"type:uuid;not null;index"`
-	AvatarURL   *string        `json:"avatar_url" gorm:"type:text"`
-	Phone       *string        `json:"phone" gorm:"type:varchar(50)"`
-	IsActive    bool           `json:"is_active" gorm:"default:true"`
-	LastLoginAt *time.Time     `json:"last_login_at"`
-	CreatedAt   time.Time      `json:"created_at"`
-	UpdatedAt   time.Time      `json:"updated_at"`
-	DeletedAt   gorm.DeletedAt `json:"-" gorm:"index"`
+	ID           string         `json:"id" gorm:"primaryKey;type:uuid"`
+	Email        string         `json:"email" gorm:"uniqueIndex;not null;type:varchar(255)"`
+	Name         string         `json:"name" gorm:"not null;type:varchar(255)"`
+	PasswordHash string         `json:"-" gorm:"column:password_hash;not null;type:varchar(255)"` // не возвращается в JSON
+	Role         UserRole       `json:"role" gorm:"not null;type:varchar(50)"`
+	CompanyID    string         `json:"company_id" gorm:"type:uuid;default:'00000000-0000-0000-0000-000000000001'"`
+	AvatarURL    *string        `json:"avatar_url" gorm:"type:text"`
+	Phone        *string        `json:"phone" gorm:"type:varchar(50)"`
+	IsActive     bool           `json:"is_active" gorm:"default:true"`
+	LastLoginAt  *time.Time     `json:"last_login_at"`
+	CreatedAt    time.Time      `json:"created_at"`
+	UpdatedAt    time.Time      `json:"updated_at"`
+	DeletedAt    gorm.DeletedAt `json:"-" gorm:"index"`
 
 	// Связи с другими таблицами
 	Company Company `json:"company,omitempty" gorm:"foreignKey:CompanyID"`

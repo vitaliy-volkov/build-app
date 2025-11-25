@@ -4,10 +4,11 @@ import { HashRouter, Routes, Route, Navigate, Link, useLocation } from 'react-ro
 import { Layout } from './components/Layout';
 import { PublicLayout } from './components/PublicLayout';
 import { AIAssistant } from './components/AIAssistant';
+import { LoadingState } from './components/LoadingState';
+import { useApiData } from './hooks/useApiData';
 import { 
-  MOCK_PROJECTS, MOCK_COUNTERPARTIES, MOCK_ESTIMATES, 
   MOCK_ESTIMATE_ITEMS, MOCK_PAYMENTS, MOCK_EVENTS,
-  MOCK_USERS, MOCK_SUPPLY_REQUESTS, MOCK_DOCUMENTS,
+  MOCK_SUPPLY_REQUESTS, MOCK_DOCUMENTS,
   MOCK_NOTIFICATIONS, MOCK_ACTS, MOCK_PRICE_CATEGORIES, MOCK_PRICE_ITEMS,
   MOCK_DESIGN_FILES, MOCK_SPECIFICATIONS, MOCK_TASKS, MOCK_CHAT, MOCK_PHOTOSTREAM,
   MOCK_CASH_ACCOUNTS, MOCK_FINANCIAL_ARTICLES, MOCK_TRANSACTIONS, MOCK_LEADS,
@@ -49,7 +50,7 @@ import { ArrowRight } from 'lucide-react';
 // --- State Management (Context) ---
 interface AppState {
   isAuthenticated: boolean;
-  currentUser: User;
+  currentUser: User | null;
   users: User[];
   projects: Project[];
   counterparties: Counterparty[];
@@ -86,8 +87,30 @@ interface AppState {
   companySettings: CompanySettings;
   aiConfig: AIConfiguration;
 
+  // Loading states
+  isLoading: boolean;
+  loading: {
+    projects: boolean;
+    users: boolean;
+    estimates: boolean;
+    counterparties: boolean;
+    payments: boolean;
+    global: boolean;
+  };
+
+  // Error states
+  hasError: boolean;
+  errors: {
+    projects: string | null;
+    users: string | null;
+    estimates: string | null;
+    counterparties: string | null;
+    payments: string | null;
+    global: string | null;
+  };
+
   // Actions
-  login: (email: string, name?: string) => void;
+  login: (email: string, name?: string) => Promise<void>;
   logout: () => void;
   setCurrentUser: (user: User) => void;
   updateUser: (user: User) => void; 
@@ -170,52 +193,29 @@ export const useApp = () => {
 
 const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [users, setUsers] = useState(MOCK_USERS);
-  const [currentUser, setCurrentUser] = useState<User>(MOCK_USERS[0]); 
   
-  const [projects, setProjects] = useState(MOCK_PROJECTS);
-  const [counterparties, setCounterparties] = useState(MOCK_COUNTERPARTIES);
-  const [estimates, setEstimates] = useState(MOCK_ESTIMATES);
-  const [estimateItems, setEstimateItems] = useState(MOCK_ESTIMATE_ITEMS);
-  const [payments, setPayments] = useState(MOCK_PAYMENTS);
-  const [events, setEvents] = useState(MOCK_EVENTS);
-  const [supplyRequests, setSupplyRequests] = useState(MOCK_SUPPLY_REQUESTS);
-  const [documents, setDocuments] = useState(MOCK_DOCUMENTS);
-  const [notifications, setNotifications] = useState(MOCK_NOTIFICATIONS);
-  const [acts, setActs] = useState(MOCK_ACTS);
-  const [priceListCategories, setPriceListCategories] = useState(MOCK_PRICE_CATEGORIES);
-  const [priceListItems, setPriceListItems] = useState(MOCK_PRICE_ITEMS);
+  // Use API data hook for real data
+  const {
+    projects, users, estimates, estimateItems, counterparties, payments,
+    events, supplyRequests, documents, notifications, acts, priceListCategories,
+    priceListItems, designFiles, specifications, tasks, chatMessages, photoStream,
+    cashAccounts, financialArticles, transactions, leads, templates,
+    operationTemplates, operationTemplateItems, measurements, companySettings,
+    aiConfig, loading, isLoading, hasError, errors, setProjects, setUsers,
+    setEstimates, setCounterparties, setEstimateItems, setPayments, setEvents,
+    setSupplyRequests, setDocuments, setNotifications, setActs, setPriceListCategories,
+    setPriceListItems, setDesignFiles, setSpecifications, setTasks, setChatMessages,
+    setPhotoStream, setCashAccounts, setFinancialArticles, setTransactions,
+    setLeads, setTemplates, setOperationTemplates, setOperationTemplateItems,
+    setMeasurements, setCompanySettings, setAiConfig
+  } = useApiData();
   
-  // New State
-  const [designFiles, setDesignFiles] = useState(MOCK_DESIGN_FILES);
-  const [specifications, setSpecifications] = useState(MOCK_SPECIFICATIONS);
-  const [tasks, setTasks] = useState(MOCK_TASKS);
-  const [chatMessages, setChatMessages] = useState(MOCK_CHAT);
-  const [photoStream, setPhotoStream] = useState(MOCK_PHOTOSTREAM);
-
-  // Finance State
-  const [cashAccounts, setCashAccounts] = useState(MOCK_CASH_ACCOUNTS);
-  const [financialArticles, setFinancialArticles] = useState(MOCK_FINANCIAL_ARTICLES);
-  const [transactions, setTransactions] = useState(MOCK_TRANSACTIONS);
-
-  // CRM State
-  const [leads, setLeads] = useState(MOCK_LEADS);
-
-  // Templates State
-  const [templates, setTemplates] = useState(MOCK_TEMPLATES);
-  const [operationTemplates, setOperationTemplates] = useState(MOCK_OPERATION_TEMPLATES);
-  const [operationTemplateItems, setOperationTemplateItems] = useState(MOCK_OPERATION_TEMPLATE_ITEMS);
-
-  // Measurements State
-  const [measurements, setMeasurements] = useState(MOCK_MEASUREMENTS);
-
-  // Settings State
-  const [companySettings, setCompanySettings] = useState(MOCK_COMPANY_SETTINGS);
-  const [aiConfig, setAiConfig] = useState(MOCK_AI_CONFIG);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
 
   // Auth Actions
-  const login = (email: string, name?: string) => {
+  const login = async (email: string, name?: string) => {
     if (name) {
+      // For demo purposes, create a temporary user
       const newUser: User = {
         id: uuidv4(),
         name: name,
@@ -224,10 +224,11 @@ const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
         avatar_initials: name.substring(0,2).toUpperCase(),
         is_active: true
       };
-      setUsers(prev => [...prev, newUser]);
       setCurrentUser(newUser);
     } else {
-      setCurrentUser(MOCK_USERS[0]);
+      // Use first available user from API data
+      const firstUser = users.length > 0 ? users[0] : null;
+      setCurrentUser(firstUser);
     }
     setIsAuthenticated(true);
   };
@@ -719,6 +720,7 @@ const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
       operationTemplates, operationTemplateItems,
       measurements,
       companySettings, aiConfig,
+      isLoading, loading, hasError, errors,
       setCurrentUser, updateUser, addUser, addProject, updateProject, addPayment, updateEstimateItem, bulkUpdateEstimateItems, addEstimateItem, deleteEstimateItem, addSupplyRequest, updateSupplyRequest, addDocument, addAct, updateAct, deleteAct,
       sendNotification, markNotificationAsRead, processApproval, addEstimate, updateEstimate, createEstimateVersion,
       addPriceListCategory, updatePriceListCategory, deletePriceListCategory, addPriceListItem, updatePriceListItem, deletePriceListItem,
@@ -772,16 +774,74 @@ const GlobalModulePage = ({ title, type }: { title: string, type: string }) => {
   );
 };
 
-export default function App() {
+const AppRoutes = () => {
+  const { isAuthenticated, isLoading, hasError, errors, initializeData } = useApp();
+
   return (
-    <AppProvider>
-      <HashRouter>
-        <ScrollToTop />
-        <AppRoutes />
-      </HashRouter>
-    </AppProvider>
+    <LoadingState
+      isLoading={isLoading}
+      hasError={hasError}
+      error={errors.global}
+      onRetry={initializeData}
+    >
+      {!isAuthenticated ? (
+        <PublicLayout>
+          <Routes>
+            <Route path="/" element={<Landing />} />
+            <Route path="/estimates-promo" element={<EstimatesPromo />} />
+            <Route path="/finance-promo" element={<FinancePromo />} />
+            <Route path="/ai-promo" element={<AIPromo />} />
+            <Route path="/supply-promo" element={<SupplyPromo />} />
+            <Route path="/about" element={<About />} />
+            <Route path="/contacts" element={<Contacts />} />
+            <Route path="/blog" element={<Blog />} />
+            <Route path="/blog/:id" element={<BlogPost />} />
+            <Route path="/auth" element={<Auth />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </PublicLayout>
+      ) : (
+        <Layout>
+          <Routes>
+            <Route path="/" element={<CompanyDashboard />} />
+            <Route path="/projects" element={<ProjectList />} />
+            <Route path="/projects/:id" element={<ProjectDashboard />} />
+            <Route path="/estimates" element={<EstimatesList />} />
+            <Route path="/estimates/:id" element={<EstimateEditor />} />
+            <Route path="/finance" element={<Finance />} />
+            <Route path="/crm" element={<CRM />} />
+            <Route path="/directories" element={<Directories />} />
+            <Route path="/resources" element={<Resources />} />
+            <Route path="/measurements" element={<Measurements />} />
+            <Route path="/settings" element={<Settings />} />
+            <Route path="/knowledge-base" element={<KnowledgeBase />} />
+            <Route path="/profile" element={<Profile />} />
+
+            {/* Promo Pages */}
+            <Route path="/estimates-promo" element={<EstimatesPromo />} />
+            <Route path="/finance-promo" element={<FinancePromo />} />
+            <Route path="/ai-promo" element={<AIPromo />} />
+            <Route path="/supply-promo" element={<SupplyPromo />} />
+            <Route path="/about" element={<About />} />
+            <Route path="/contacts" element={<Contacts />} />
+            <Route path="/blog" element={<Blog />} />
+            <Route path="/blog/:id" element={<BlogPost />} />
+
+            {/* Global Module Pages */}
+            <Route path="/supply" element={<GlobalModulePage title="Снабжение" type="supply" />} />
+            <Route path="/complectation" element={<GlobalModulePage title="Комплектация" type="complectation" />} />
+            <Route path="/docs" element={<GlobalModulePage title="Документооборот" type="docs" />} />
+            <Route path="/acts" element={<GlobalModulePage title="Акты (КС-2/КС-3)" type="acts" />} />
+            <Route path="/chats" element={<GlobalModulePage title="Чаты и Коммуникации" type="team" />} />
+            <Route path="/photos" element={<GlobalModulePage title="Фотоотчеты" type="photos" />} />
+
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </Layout>
+      )}
+    </LoadingState>
   );
-}
+};
 
 const ScrollToTop = () => {
   const { pathname } = useLocation();
@@ -791,59 +851,15 @@ const ScrollToTop = () => {
   return null;
 };
 
-const AppRoutes = () => {
-  const { isAuthenticated } = useApp();
-
-  if (!isAuthenticated) {
-    return (
-      <PublicLayout>
-        <Routes>
-          <Route path="/" element={<Landing />} />
-          <Route path="/estimates-promo" element={<EstimatesPromo />} />
-          <Route path="/finance-promo" element={<FinancePromo />} />
-          <Route path="/ai-promo" element={<AIPromo />} />
-          <Route path="/supply-promo" element={<SupplyPromo />} />
-          <Route path="/about" element={<About />} />
-          <Route path="/contacts" element={<Contacts />} />
-          <Route path="/blog" element={<Blog />} />
-          <Route path="/blog/:id" element={<BlogPost />} />
-          <Route path="/login" element={<Auth />} />
-          <Route path="/register" element={<Auth />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </PublicLayout>
-    );
-  }
-
+export const App: React.FC = () => {
   return (
-    <Layout>
-      <Routes>
-        <Route path="/" element={<CompanyDashboard />} />
-        <Route path="/projects" element={<ProjectList />} />
-        <Route path="/project/:id" element={<ProjectDashboard />} />
-        <Route path="/project/:projectId/estimate/:estimateId" element={<EstimateEditor />} />
-        <Route path="/estimates" element={<EstimatesList />} />
-        <Route path="/crm" element={<CRM />} />
-        <Route path="/directories" element={<Directories />} />
-        <Route path="/finance" element={<Finance />} />
-        <Route path="/resources" element={<Resources />} />
-        <Route path="/knowledge" element={<KnowledgeBase />} />
-        <Route path="/measurements" element={<Measurements />} />
-        <Route path="/settings" element={<Settings />} />
-        <Route path="/profile" element={<Profile />} />
-        
-        {/* Global Module Routes */}
-        <Route path="/schedule" element={<GlobalModulePage title="Графики работ" type="schedule" />} />
-        <Route path="/design" element={<GlobalModulePage title="Дизайн-проекты" type="design" />} />
-        <Route path="/supply" element={<GlobalModulePage title="Снабжение" type="supply" />} />
-        <Route path="/complectation" element={<GlobalModulePage title="Комплектация" type="complectation" />} />
-        <Route path="/docs" element={<GlobalModulePage title="Документооборот" type="docs" />} />
-        <Route path="/acts" element={<GlobalModulePage title="Акты (КС-2/КС-3)" type="acts" />} />
-        <Route path="/chats" element={<GlobalModulePage title="Чаты и Коммуникации" type="team" />} />
-        <Route path="/photos" element={<GlobalModulePage title="Фотоотчеты" type="photos" />} />
-
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </Layout>
+    <AppProvider>
+      <HashRouter>
+        <ScrollToTop />
+        <AppRoutes />
+      </HashRouter>
+    </AppProvider>
   );
 };
+
+export default App;
