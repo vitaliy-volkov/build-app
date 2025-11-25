@@ -1,0 +1,87 @@
+global:
+  smtp_smarthost: 'localhost:587'
+  smtp_from: 'alerts@stroy-control.ru'
+  smtp_auth_username: 'alerts@stroy-control.ru'
+  smtp_auth_password: 'your-smtp-password'
+
+route:
+  group_by: ['alertname', 'service']
+  group_wait: 10s
+  group_interval: 10s
+  repeat_interval: 1h
+  receiver: 'web.hook'
+  routes:
+    - match:
+        severity: critical
+      receiver: 'critical-alerts'
+    - match:
+        service: backend
+      receiver: 'backend-team'
+    - match:
+        service: ai-gateway
+      receiver: 'ai-team'
+    - match:
+        service: infrastructure
+      receiver: 'infra-team'
+
+receivers:
+  - name: 'web.hook'
+    webhook_configs:
+      - url: 'http://localhost:5001/'
+        send_resolved: true
+
+  - name: 'critical-alerts'
+    email_configs:
+      - to: 'admin@stroy-control.ru'
+        subject: '🚨 CRITICAL ALERT: {{ .GroupLabels.alertname }}'
+        body: |
+          {{ range .Alerts }}
+          Alert: {{ .Annotations.summary }}
+          Description: {{ .Annotations.description }}
+          Labels: {{ range .Labels.SortedPairs }} - {{ .Name }} = {{ .Value }}{{ end }}
+          {{ end }}
+    slack_configs:
+      - api_url: 'YOUR_SLACK_WEBHOOK_URL'
+        channel: '#alerts'
+        title: '🚨 Critical Alert'
+        text: '{{ range .Alerts }}{{ .Annotations.summary }}{{ end }}'
+
+  - name: 'backend-team'
+    email_configs:
+      - to: 'backend-team@stroy-control.ru'
+        subject: '🔧 Backend Alert: {{ .GroupLabels.alertname }}'
+        body: |
+          Service: Backend
+          {{ range .Alerts }}
+          Alert: {{ .Annotations.summary }}
+          Description: {{ .Annotations.description }}
+          {{ end }}
+
+  - name: 'ai-team'
+    email_configs:
+      - to: 'ai-team@stroy-control.ru'
+        subject: '🤖 AI Gateway Alert: {{ .GroupLabels.alertname }}'
+        body: |
+          Service: AI Gateway
+          {{ range .Alerts }}
+          Alert: {{ .Annotations.summary }}
+          Description: {{ .Annotations.description }}
+          {{ end }}
+
+  - name: 'infra-team'
+    email_configs:
+      - to: 'infra-team@stroy-control.ru'
+        subject: '🖥️ Infrastructure Alert: {{ .GroupLabels.alertname }}'
+        body: |
+          Service: Infrastructure
+          {{ range .Alerts }}
+          Alert: {{ .Annotations.summary }}
+          Description: {{ .Annotations.description }}
+          {{ end }}
+
+inhibit_rules:
+  - source_match:
+      severity: 'critical'
+    target_match:
+      severity: 'warning'
+    equal: ['alertname', 'dev', 'instance']

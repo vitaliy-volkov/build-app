@@ -1,0 +1,201 @@
+groups:
+  - name: backend_alerts
+    rules:
+      # Backend response time alerts
+      - alert: BackendHighResponseTime
+        expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket{job="backend"}[5m])) > 0.3
+        for: 2m
+        labels:
+          severity: warning
+          service: backend
+        annotations:
+          summary: "High backend response time"
+          description: "95th percentile response time is {{ $value }}s for {{ $labels.endpoint }}"
+
+      - alert: BackendCriticalResponseTime
+        expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket{job="backend"}[5m])) > 1.0
+        for: 1m
+        labels:
+          severity: critical
+          service: backend
+        annotations:
+          summary: "Critical backend response time"
+          description: "95th percentile response time is {{ $value }}s for {{ $labels.endpoint }}"
+
+      # Backend error rate alerts
+      - alert: BackendHighErrorRate
+        expr: rate(http_requests_total{job="backend",status=~"5.."}[5m]) / rate(http_requests_total{job="backend"}[5m]) > 0.01
+        for: 2m
+        labels:
+          severity: warning
+          service: backend
+        annotations:
+          summary: "High backend error rate"
+          description: "Error rate is {{ $value | humanizePercentage }} for {{ $labels.endpoint }}"
+
+      - alert: BackendCriticalErrorRate
+        expr: rate(http_requests_total{job="backend",status=~"5.."}[5m]) / rate(http_requests_total{job="backend"}[5m]) > 0.05
+        for: 1m
+        labels:
+          severity: critical
+          service: backend
+        annotations:
+          summary: "Critical backend error rate"
+          description: "Error rate is {{ $value | humanizePercentage }} for {{ $labels.endpoint }}"
+
+  - name: ai_gateway_alerts
+    rules:
+      # High response time alerts
+      - alert: AIGatewayHighResponseTime
+        expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket{job="ai-gateway"}[5m])) > 0.5
+        for: 2m
+        labels:
+          severity: warning
+          service: ai-gateway
+        annotations:
+          summary: "High AI Gateway response time"
+          description: "95th percentile response time is {{ $value }}s for {{ $labels.endpoint }}"
+
+      - alert: AIGatewayCriticalResponseTime
+        expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket{job="ai-gateway"}[5m])) > 2.0
+        for: 1m
+        labels:
+          severity: critical
+          service: ai-gateway
+        annotations:
+          summary: "Critical AI Gateway response time"
+          description: "95th percentile response time is {{ $value }}s for {{ $labels.endpoint }}"
+
+      # Error rate alerts
+      - alert: AIGatewayHighErrorRate
+        expr: rate(http_requests_total{job="ai-gateway",status=~"5.."}[5m]) / rate(http_requests_total{job="ai-gateway"}[5m]) > 0.01
+        for: 2m
+        labels:
+          severity: warning
+          service: ai-gateway
+        annotations:
+          summary: "High AI Gateway error rate"
+          description: "Error rate is {{ $value | humanizePercentage }} for {{ $labels.endpoint }}"
+
+  - name: system_alerts
+    rules:
+      # Service availability
+      - alert: ServiceDown
+        expr: up == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: infrastructure
+        annotations:
+          summary: "Service is down"
+          description: "Service {{ $labels.job }} on {{ $labels.instance }} is down"
+
+      # High CPU usage
+      - alert: HighCPUUsage
+        expr: 100 - (avg by(instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
+        for: 5m
+        labels:
+          severity: warning
+          service: infrastructure
+        annotations:
+          summary: "High CPU usage"
+          description: "CPU usage is {{ $value }}% on {{ $labels.instance }}"
+
+      - alert: CriticalCPUUsage
+        expr: 100 - (avg by(instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 95
+        for: 2m
+        labels:
+          severity: critical
+          service: infrastructure
+        annotations:
+          summary: "Critical CPU usage"
+          description: "CPU usage is {{ $value }}% on {{ $labels.instance }}"
+
+      # High memory usage
+      - alert: HighMemoryUsage
+        expr: (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 85
+        for: 5m
+        labels:
+          severity: warning
+          service: infrastructure
+        annotations:
+          summary: "High memory usage"
+          description: "Memory usage is {{ $value }}% on {{ $labels.instance }}"
+
+      - alert: CriticalMemoryUsage
+        expr: (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 95
+        for: 2m
+        labels:
+          severity: critical
+          service: infrastructure
+        annotations:
+          summary: "Critical memory usage"
+          description: "Memory usage is {{ $value }}% on {{ $labels.instance }}"
+
+      # Disk usage
+      - alert: HighDiskUsage
+        expr: (1 - (node_filesystem_free_bytes / node_filesystem_size_bytes)) * 100 > 80
+        for: 5m
+        labels:
+          severity: warning
+          service: infrastructure
+        annotations:
+          summary: "High disk usage"
+          description: "Disk usage is {{ $value }}% on {{ $labels.instance }}"
+
+      - alert: CriticalDiskUsage
+        expr: (1 - (node_filesystem_free_bytes / node_filesystem_size_bytes)) * 100 > 90
+        for: 1m
+        labels:
+          severity: critical
+          service: infrastructure
+        annotations:
+          summary: "Critical disk usage"
+          description: "Disk usage is {{ $value }}% on {{ $labels.instance }}"
+
+  - name: database_alerts
+    rules:
+      # Redis alerts
+      - alert: RedisConnectionFailures
+        expr: redis_connected_clients == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: database
+        annotations:
+          summary: "Redis connection failure"
+          description: "Redis has no connected clients"
+
+      - alert: RedisHighMemoryUsage
+        expr: redis_memory_used_bytes / redis_memory_max_bytes > 0.9
+        for: 5m
+        labels:
+          severity: warning
+          service: database
+        annotations:
+          summary: "Redis high memory usage"
+          description: "Redis memory usage is {{ $value | humanizePercentage }}"
+
+  - name: business_alerts
+    rules:
+      # API response time SLA violations
+      - alert: APISLATViolation
+        expr: histogram_quantile(0.99, rate(http_request_duration_seconds_bucket[5m])) > 2.0
+        for: 3m
+        labels:
+          severity: warning
+          service: business
+        annotations:
+          summary: "API SLA violation"
+          description: "99th percentile response time exceeds SLA: {{ $value }}s"
+
+      # Request rate anomalies
+      - alert: UnusualRequestRate
+        expr: rate(http_requests_total[5m]) < 0.1
+        for: 10m
+        labels:
+          severity: warning
+          service: business
+        annotations:
+          summary: "Unusual request rate"
+          description: "Request rate is unusually low: {{ $value }}/s"
