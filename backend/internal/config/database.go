@@ -57,10 +57,10 @@ func ConnectDatabase(cfg *Config) (*Database, error) {
 
 	log.Println("Database connection established successfully")
 
-	// Настраиваем AutoMigrate
-	if err := setupAutoMigrate(db); err != nil {
-		return nil, fmt.Errorf("failed to setup auto migration: %w", err)
-	}
+	// Skip AutoMigrate since we have manual schema migrations
+	// if err := setupAutoMigrate(db); err != nil {
+	// 	return nil, fmt.Errorf("failed to setup auto migration: %w", err)
+	// }
 
 	return &Database{DB: db}, nil
 }

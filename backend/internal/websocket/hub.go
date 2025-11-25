@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"stroy-control-backend/internal/auth"
+	"stroy-control-backend/internal/models"
 	"stroy-control-backend/internal/redis"
 
 	"github.com/gin-gonic/gin"
@@ -87,7 +88,7 @@ func NewWebSocketHub(authMiddleware *auth.AuthMiddleware, redisService *redis.Re
 // ServeWebSocket handles WebSocket connections
 func (h *WebSocketHub) ServeWebSocket(c *gin.Context) {
 	// Authenticate the user
-	user := c.MustGet("user").(*auth.User)
+	user := c.MustGet("user").(*models.User)
 	if user == nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
 		return
