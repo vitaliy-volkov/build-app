@@ -301,7 +301,23 @@ export const MOCK_MEASUREMENTS: MeasurementProject[] = [
             openings: [
               { id: 'op-1', type: 'Window', width: 1500, height: 1500, distanceFromStart: 1500, wallIndex: 1 },
               { id: 'op-2', type: 'Door', width: 900, height: 2100, distanceFromStart: 500, wallIndex: 3 }
-            ]
+            ],
+            calculations: {
+              floorArea: 20,
+              ceilingArea: 20,
+              perimeter: 18,
+              wallHeight: 2.8,
+              wallAreaGross: 50.4,
+              wallAreaNet: 46.26,
+              roomVolume: 56,
+              openingsArea: 4.14,
+              doorCount: 1,
+              windowCount: 1,
+              doorArea: 1.89,
+              windowArea: 2.25,
+              windowSillLength: 1.5,
+              slopeLength: 9.6
+            }
           }
         ]
       }
