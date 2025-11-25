@@ -1,0 +1,13 @@
+
+> stroy-kontrol@0.0.0 dev
+> vite
+
+Port 3000 is in use, trying another one...
+Port 3001 is in use, trying another one...
+
+  VITE v6.4.1  ready in 125 ms
+
+  ➜  Local:   http://localhost:3002/
+  ➜  Network: http://192.168.3.10:3002/
+  ➜  Network: http://240.0.0.2:3002/
+  ➜  press h + enter to show help

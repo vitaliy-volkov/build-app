@@ -1,0 +1,284 @@
+2025/11/25 14:46:39 Connecting to PostgreSQL database...
+2025/11/25 14:46:39 Database connection established successfully
+2025/11/25 14:46:39 Warning: Redis connection failed: dial tcp: address localhost: missing port in address
+[GIN-debug] [WARNING] Creating an Engine instance with the Logger and Recovery middleware already attached.
+
+[GIN-debug] [WARNING] Running in "debug" mode. Switch to "release" mode in production.
+ - using env:	export GIN_MODE=release
+ - using code:	gin.SetMode(gin.ReleaseMode)
+
+[GIN-debug] POST   /api/v1/auth/login        --> stroy-control-backend/internal/auth.(*AuthHandler).Login-fm (10 handlers)
+[GIN-debug] POST   /api/v1/auth/register     --> stroy-control-backend/internal/auth.(*AuthHandler).Register-fm (10 handlers)
+[GIN-debug] POST   /api/v1/auth/refresh      --> stroy-control-backend/internal/auth.(*AuthHandler).RefreshToken-fm (10 handlers)
+[GIN-debug] GET    /api/v1/auth/me           --> stroy-control-backend/internal/auth.(*AuthHandler).Me-fm (11 handlers)
+[GIN-debug] POST   /api/v1/auth/logout       --> stroy-control-backend/internal/auth.(*AuthHandler).Logout-fm (11 handlers)
+[GIN-debug] PUT    /api/v1/auth/change-password --> stroy-control-backend/internal/auth.(*AuthHandler).ChangePassword-fm (11 handlers)
+[GIN-debug] GET    /api/v1/public/projects   --> stroy-control-backend/internal/project.(*PublicHandler).ListProjectsPublic-fm (10 handlers)
+[GIN-debug] GET    /api/v1/projects          --> stroy-control-backend/internal/project.(*ProjectHandler).ListProjects-fm (11 handlers)
+[GIN-debug] POST   /api/v1/projects          --> stroy-control-backend/internal/project.(*ProjectHandler).CreateProject-fm (11 handlers)
+[GIN-debug] GET    /api/v1/projects/:id      --> stroy-control-backend/internal/project.(*ProjectHandler).GetProject-fm (11 handlers)
+[GIN-debug] PUT    /api/v1/projects/:id      --> stroy-control-backend/internal/project.(*ProjectHandler).UpdateProject-fm (11 handlers)
+[GIN-debug] DELETE /api/v1/projects/:id      --> stroy-control-backend/internal/project.(*ProjectHandler).DeleteProject-fm (11 handlers)
+[GIN-debug] GET    /api/v1/projects/:id/team --> stroy-control-backend/internal/project.(*TeamHandler).GetProjectTeam-fm (11 handlers)
+[GIN-debug] POST   /api/v1/projects/:id/team --> stroy-control-backend/internal/project.(*TeamHandler).AddTeamMember-fm (11 handlers)
+[GIN-debug] PUT    /api/v1/projects/:id/team/:user_id --> stroy-control-backend/internal/project.(*TeamHandler).UpdateMemberRole-fm (11 handlers)
+[GIN-debug] DELETE /api/v1/projects/:id/team/:user_id --> stroy-control-backend/internal/project.(*TeamHandler).RemoveTeamMember-fm (11 handlers)
+[GIN-debug] GET    /api/v1/companies         --> stroy-control-backend/internal/company.(*CompanyHandler).ListCompanies-fm (11 handlers)
+[GIN-debug] POST   /api/v1/companies         --> stroy-control-backend/internal/company.(*CompanyHandler).CreateCompany-fm (11 handlers)
+[GIN-debug] GET    /api/v1/companies/:id     --> stroy-control-backend/internal/company.(*CompanyHandler).GetCompany-fm (11 handlers)
+[GIN-debug] PUT    /api/v1/companies/:id     --> stroy-control-backend/internal/company.(*CompanyHandler).UpdateCompany-fm (11 handlers)
+[GIN-debug] GET    /api/v1/ai/health         --> stroy-control-backend/internal/ai.(*RouterGroup).healthCheck-fm (10 handlers)
+[GIN-debug] POST   /api/v1/ai/estimates/analyze --> stroy-control-backend/internal/ai.(*AIHandler).AnalyzeEstimate-fm (11 handlers)
+[GIN-debug] POST   /api/v1/ai/chat           --> stroy-control-backend/internal/ai.(*AIHandler).ChatAssistant-fm (11 handlers)
+[GIN-debug] POST   /api/v1/ai/risks/predict  --> stroy-control-backend/internal/ai.(*AIHandler).PredictRisks-fm (11 handlers)
+[GIN-debug] GET    /api/v1/ai/metrics        --> stroy-control-backend/internal/ai.(*AIHandler).GetMetrics-fm (11 handlers)
+[GIN-debug] GET    /api/v1/ai/history        --> stroy-control-backend/internal/ai.(*AIHandler).GetAnalysisHistory-fm (11 handlers)
+[GIN-debug] GET    /health                   --> main.main.func1 (10 handlers)
+[GIN-debug] GET    /api/v1/health/database   --> main.main.func2 (10 handlers)
+2025/11/25 14:46:39 Server starting on port 8080
+[2025-11-25T14:46:40+03:00] GET /metrics 404 34.375µs 127.0.0.1 req-80f0b5a99c1944200340ec80c83c8dfe
+[GIN] 2025/11/25 - 14:46:40 | 404 |     108.167µs |       127.0.0.1 | GET      "/metrics"
+[2025-11-25T14:46:45+03:00] GET /metrics 404 114.125µs 127.0.0.1 req-b489eb15f323b8874483154cfeecd7b3
+[GIN] 2025/11/25 - 14:46:45 | 404 |      237.25µs |       127.0.0.1 | GET      "/metrics"
+[2025-11-25T14:46:50+03:00] GET /metrics 404 63.125µs 127.0.0.1 req-2fa234f41a7a8cf6d9cdf34603574bc8
+[GIN] 2025/11/25 - 14:46:50 | 404 |     310.791µs |       127.0.0.1 | GET      "/metrics"
+[2025-11-25T14:46:55+03:00] GET /metrics 404 126.458µs 127.0.0.1 req-6c87a57512c1dd7a10c67546850ca8cf
+[GIN] 2025/11/25 - 14:46:55 | 404 |     264.458µs |       127.0.0.1 | GET      "/metrics"
+
+2025/11/25 14:46:55 [32m/Users/user/Desktop/строй-контроль/backend/internal/project/public_handlers.go:28
+[0m[33m[15.708ms] [34;1m[rows:1][0m SELECT * FROM "projects" WHERE deleted_at IS NULL AND "projects"."deleted_at" IS NULL
+[2025-11-25T14:46:55+03:00] GET /api/v1/public/projects 200 18.294958ms ::1 req-6f1b2e8adbfa16f4a829708b1593ccda
+[GIN] 2025/11/25 - 14:46:55 | 200 |   18.582875ms |             ::1 | GET      "/api/v1/public/projects"
+[2025-11-25T14:47:00+03:00] GET /metrics 404 233.792µs 127.0.0.1 req-2815ba86ba4e57d89752b2c49a3b5b1c
+[GIN] 2025/11/25 - 14:47:00 | 404 |       413.5µs |       127.0.0.1 | GET      "/metrics"
+[2025-11-25T14:47:05+03:00] GET /metrics 404 159.084µs 127.0.0.1 req-6696fe387221e717b9a93abf6bf75b40
+[GIN] 2025/11/25 - 14:47:05 | 404 |       383.5µs |       127.0.0.1 | GET      "/metrics"
+[2025-11-25T14:47:10+03:00] GET /metrics 404 164.792µs 127.0.0.1 req-208d580d24e1753446dfab283ae22515
+[GIN] 2025/11/25 - 14:47:10 | 404 |     329.875µs |       127.0.0.1 | GET      "/metrics"
+[2025-11-25T14:47:11+03:00] OPTIONS /api/v1/public/projects 204 29.292µs ::1 req-a10bf2680abbf58b79e491b32262fa4e
+[GIN] 2025/11/25 - 14:47:11 | 204 |       64.75µs |             ::1 | OPTIONS  "/api/v1/public/projects"
+[2025-11-25T14:47:15+03:00] GET /metrics 404 113.583µs 127.0.0.1 req-d2a7c15742ef32305109995dbdbb3eca
+[GIN] 2025/11/25 - 14:47:15 | 404 |     195.958µs |       127.0.0.1 | GET      "/metrics"
+[2025-11-25T14:47:20+03:00] GET /metrics 404 106.833µs 127.0.0.1 req-06dc77f7beb6a734df2d190f525b7d83
+[GIN] 2025/11/25 - 14:47:20 | 404 |       246.5µs |       127.0.0.1 | GET      "/metrics"
+[2025-11-25T14:47:25+03:00] GET /metrics 404 61.375µs 127.0.0.1 req-957b629eab7bcac6fca55d9127108926
+[GIN] 2025/11/25 - 14:47:25 | 404 |     145.458µs |       127.0.0.1 | GET      "/metrics"
+[2025-11-25T14:47:30+03:00] GET /metrics 404 264.875µs 127.0.0.1 req-e8d202274d4c415960928a061b80b0b3
+[GIN] 2025/11/25 - 14:47:30 | 404 |     500.417µs |       127.0.0.1 | GET      "/metrics"
+[2025-11-25T14:47:35+03:00] GET /metrics 404 1.46175ms 127.0.0.1 req-bd5b754f0a74786a1dadcdd12641b011
+[GIN] 2025/11/25 - 14:47:35 | 404 |       1.945ms |       127.0.0.1 | GET      "/metrics"
+
+2025/11/25 14:47:36 [32m/Users/user/Desktop/строй-контроль/backend/internal/project/public_handlers.go:28
+[0m[33m[11.401ms] [34;1m[rows:1][0m SELECT * FROM "projects" WHERE deleted_at IS NULL AND "projects"."deleted_at" IS NULL
+[2025-11-25T14:47:36+03:00] GET /api/v1/public/projects 200 11.609042ms ::1 req-fb99a23ecb9cc68aadcd4036ff01b837
+[GIN] 2025/11/25 - 14:47:36 | 200 |   11.633833ms |             ::1 | GET      "/api/v1/public/projects"
+[2025-11-25T14:47:40+03:00] GET /metrics 404 236.792µs 127.0.0.1 req-746c513166468b0fbe545f183a5beb66
+[GIN] 2025/11/25 - 14:47:40 | 404 |      589.75µs |       127.0.0.1 | GET      "/metrics"
+[2025-11-25T14:47:45+03:00] GET /metrics 404 131.625µs 127.0.0.1 req-25da1cbe303e364d6a7f48f1f88b9669
+[GIN] 2025/11/25 - 14:47:45 | 404 |     255.125µs |       127.0.0.1 | GET      "/metrics"
+[2025-11-25T14:47:50+03:00] GET /metrics 404 144.125µs 127.0.0.1 req-dabcb71e69b92a74ff1b6f963d3d0b17
+[GIN] 2025/11/25 - 14:47:50 | 404 |     422.541µs |       127.0.0.1 | GET      "/metrics"
+[2025-11-25T14:47:55+03:00] GET /metrics 404 114.875µs 127.0.0.1 req-d1806d06e3140eb45ef01663a284f7c4
+[GIN] 2025/11/25 - 14:47:55 | 404 |     200.292µs |       127.0.0.1 | GET      "/metrics"
+[2025-11-25T14:48:00+03:00] GET /metrics 404 127.5µs 127.0.0.1 req-3482e09e8bc720d573bc524046f48d01
+[GIN] 2025/11/25 - 14:48:00 | 404 |     274.042µs |       127.0.0.1 | GET      "/metrics"
+[2025-11-25T14:48:05+03:00] GET /metrics 404 118.583µs 127.0.0.1 req-2b88767f875aeda7365605d8f7762aa4
+[GIN] 2025/11/25 - 14:48:05 | 404 |     215.625µs |       127.0.0.1 | GET      "/metrics"
+[2025-11-25T14:48:10+03:00] GET /metrics 404 153.125µs 127.0.0.1 req-315a588757d4bea652491ff3ee91b8dc
+[GIN] 2025/11/25 - 14:48:10 | 404 |     298.167µs |       127.0.0.1 | GET      "/metrics"
+[2025-11-25T14:48:15+03:00] GET /metrics 404 249.375µs 127.0.0.1 req-8713d24fc0899fd00c07b89dc72b7ca0
+[GIN] 2025/11/25 - 14:48:15 | 404 |      535.75µs |       127.0.0.1 | GET      "/metrics"
+[2025-11-25T14:48:20+03:00] GET /metrics 404 119.375µs 127.0.0.1 req-c0de159664d800bc155c52479bef2f68
+[GIN] 2025/11/25 - 14:48:20 | 404 |     229.041µs |       127.0.0.1 | GET      "/metrics"
+[2025-11-25T14:48:25+03:00] GET /metrics 404 70.25µs 127.0.0.1 req-3b031373736b7b8a076f7f159dbbb6f7
+[GIN] 2025/11/25 - 14:48:25 | 404 |     232.417µs |       127.0.0.1 | GET      "/metrics"
+[2025-11-25T14:48:30+03:00] GET /metrics 404 191.75µs 127.0.0.1 req-c0bb5342839d6bb50687b42f341da06e
+[GIN] 2025/11/25 - 14:48:30 | 404 |    1.141416ms |       127.0.0.1 | GET      "/metrics"
+[2025-11-25T14:48:35+03:00] GET /metrics 404 195.417µs 127.0.0.1 req-60a92c642519e873280b83592b79ad9e
+[GIN] 2025/11/25 - 14:48:35 | 404 |     625.292µs |       127.0.0.1 | GET      "/metrics"
+[2025-11-25T14:48:40+03:00] GET /metrics 404 104.458µs 127.0.0.1 req-36feca24b5fce2ce6ad218f9c782d09e
+[GIN] 2025/11/25 - 14:48:40 | 404 |     278.917µs |       127.0.0.1 | GET      "/metrics"
+[2025-11-25T14:48:45+03:00] GET /metrics 404 244.792µs 127.0.0.1 req-a2c1e5b761bd7b7a2090b9a4f7725d84
+[GIN] 2025/11/25 - 14:48:45 | 404 |       507.5µs |       127.0.0.1 | GET      "/metrics"
+[2025-11-25T14:48:50+03:00] GET /metrics 404 129.667µs 127.0.0.1 req-416a40f39df195a45318b0406bb1743f
+[GIN] 2025/11/25 - 14:48:50 | 404 |    1.071208ms |       127.0.0.1 | GET      "/metrics"
+[2025-11-25T14:48:55+03:00] GET /metrics 404 29.667µs 127.0.0.1 req-75435a202d3e3d6ba62a4f864c8993af
+[GIN] 2025/11/25 - 14:48:55 | 404 |     156.084µs |       127.0.0.1 | GET      "/metrics"
+[2025-11-25T14:49:00+03:00] GET /metrics 404 88.042µs 127.0.0.1 req-6b96533e37bf7eaa259a9b59183748e1
+[GIN] 2025/11/25 - 14:49:00 | 404 |     196.125µs |       127.0.0.1 | GET      "/metrics"
+[2025-11-25T14:49:05+03:00] GET /metrics 404 184.167µs 127.0.0.1 req-66fe376a9793bded33ef0acbdce9297f
+[GIN] 2025/11/25 - 14:49:05 | 404 |     363.375µs |       127.0.0.1 | GET      "/metrics"
+[2025-11-25T14:49:10+03:00] GET /metrics 404 77µs 127.0.0.1 req-ec3725e173ad4f3aecd7bb77840da36b
+[GIN] 2025/11/25 - 14:49:10 | 404 |     281.458µs |       127.0.0.1 | GET      "/metrics"
+[2025-11-25T14:49:15+03:00] GET /metrics 404 109.834µs 127.0.0.1 req-54f4822ba696689abda371c40ef2f911
+[GIN] 2025/11/25 - 14:49:15 | 404 |     473.709µs |       127.0.0.1 | GET      "/metrics"
+[2025-11-25T14:49:20+03:00] GET /metrics 404 191.041µs 127.0.0.1 req-7f8cb77ae07ffd96060954480b9060d7
+[GIN] 2025/11/25 - 14:49:20 | 404 |     713.792µs |       127.0.0.1 | GET      "/metrics"
+[2025-11-25T14:49:25+03:00] GET /metrics 404 102.125µs 127.0.0.1 req-bee3a93e6551ad784c1dc77c36e0bee8
+[GIN] 2025/11/25 - 14:49:25 | 404 |     640.041µs |       127.0.0.1 | GET      "/metrics"
+[2025-11-25T14:49:30+03:00] GET /metrics 404 125.834µs 127.0.0.1 req-2904f5cdc9a9a36b20e4e10becbe0469
+[GIN] 2025/11/25 - 14:49:30 | 404 |     280.125µs |       127.0.0.1 | GET      "/metrics"
+[2025-11-25T14:49:35+03:00] GET /metrics 404 191.375µs 127.0.0.1 req-1e1ff8a064064eadfe4b341bb63b8b21
+[GIN] 2025/11/25 - 14:49:35 | 404 |     448.917µs |       127.0.0.1 | GET      "/metrics"
+[2025-11-25T14:49:40+03:00] GET /metrics 404 557.083µs 127.0.0.1 req-4c4b903be30bbe577ed92a3f43230b8e
+[GIN] 2025/11/25 - 14:49:40 | 404 |     917.166µs |       127.0.0.1 | GET      "/metrics"
+[2025-11-25T14:49:45+03:00] GET /metrics 404 17.375µs 127.0.0.1 req-13cc69dd6919fd29921521552e52da03
+[GIN] 2025/11/25 - 14:49:45 | 404 |      63.459µs |       127.0.0.1 | GET      "/metrics"
+[2025-11-25T14:49:50+03:00] GET /metrics 404 34.667µs 127.0.0.1 req-e48a9ddcb3816ea510e22d106c6993d4
+[GIN] 2025/11/25 - 14:49:50 | 404 |     205.291µs |       127.0.0.1 | GET      "/metrics"
+[2025-11-25T14:49:55+03:00] GET /metrics 404 202.791µs 127.0.0.1 req-ac5db0dc577780c00dc077c35429d28f
+[GIN] 2025/11/25 - 14:49:55 | 404 |     582.583µs |       127.0.0.1 | GET      "/metrics"
+[2025-11-25T14:50:00+03:00] GET /metrics 404 87.833µs 127.0.0.1 req-9a00d00659f89bfcb9e591338ef63d81
+[GIN] 2025/11/25 - 14:50:00 | 404 |         202µs |       127.0.0.1 | GET      "/metrics"
+[2025-11-25T14:50:05+03:00] GET /metrics 404 86.375µs 127.0.0.1 req-1aa28f042cb44b7f21a5024532e6f02b
+[GIN] 2025/11/25 - 14:50:05 | 404 |     451.834µs |       127.0.0.1 | GET      "/metrics"
+[2025-11-25T14:50:10+03:00] GET /metrics 404 187.375µs 127.0.0.1 req-6710d16dc582c55bb4cbe929cbeb4152
+[GIN] 2025/11/25 - 14:50:10 | 404 |     660.791µs |       127.0.0.1 | GET      "/metrics"
+[2025-11-25T14:50:15+03:00] GET /metrics 404 2.420042ms 127.0.0.1 req-4f47eee3ce9438745f3e0a6f4340569c
+[GIN] 2025/11/25 - 14:50:15 | 404 |    4.797333ms |       127.0.0.1 | GET      "/metrics"
+[2025-11-25T14:50:20+03:00] GET /metrics 404 2.788667ms 127.0.0.1 req-ef60c77cf0009e7ae45af58064554505
+[GIN] 2025/11/25 - 14:50:20 | 404 |    5.570833ms |       127.0.0.1 | GET      "/metrics"
+[2025-11-25T14:50:25+03:00] GET /metrics 404 3.3915ms 127.0.0.1 req-959183ef4e1c732834e8a2bc607d7b73
+[GIN] 2025/11/25 - 14:50:25 | 404 |     6.19525ms |       127.0.0.1 | GET      "/metrics"
+[2025-11-25T14:50:30+03:00] GET /metrics 404 1.686459ms 127.0.0.1 req-330a0a9cdda96840cbd9e3a850078b4b
+[GIN] 2025/11/25 - 14:50:30 | 404 |       6.414ms |       127.0.0.1 | GET      "/metrics"
+[2025-11-25T14:50:35+03:00] GET /metrics 404 2.708459ms 127.0.0.1 req-dfb1982e68c2f79dc64720062e6920f3
+[GIN] 2025/11/25 - 14:50:35 | 404 |   13.993333ms |       127.0.0.1 | GET      "/metrics"
+[2025-11-25T14:50:40+03:00] GET /metrics 404 8.434417ms 127.0.0.1 req-64749ea02af494321d9c207239c6b8e3
+[GIN] 2025/11/25 - 14:50:40 | 404 |   17.278875ms |       127.0.0.1 | GET      "/metrics"
+[2025-11-25T14:50:45+03:00] GET /metrics 404 85.041µs 127.0.0.1 req-fee09dcfe2ba473274e1833b94c6f4e0
+[GIN] 2025/11/25 - 14:50:45 | 404 |       524.5µs |       127.0.0.1 | GET      "/metrics"
+[2025-11-25T14:50:50+03:00] GET /metrics 404 76.417µs 127.0.0.1 req-90817493cec7e7f843f512d1f74676f3
+[GIN] 2025/11/25 - 14:50:50 | 404 |     292.709µs |       127.0.0.1 | GET      "/metrics"
+[2025-11-25T14:50:55+03:00] GET /metrics 404 1.154875ms 127.0.0.1 req-1722797b94d54ab5f2b60189b0d4fd36
+[GIN] 2025/11/25 - 14:50:55 | 404 |    1.405958ms |       127.0.0.1 | GET      "/metrics"
+[2025-11-25T14:51:00+03:00] GET /metrics 404 2.931667ms 127.0.0.1 req-5fe57b604ddfc9e9c8acdfd7f588ff3b
+[GIN] 2025/11/25 - 14:51:00 | 404 |    4.992625ms |       127.0.0.1 | GET      "/metrics"
+[2025-11-25T14:51:05+03:00] GET /metrics 404 218.875µs 127.0.0.1 req-454af7ab2a07386c93ae42e3a886f437
+[GIN] 2025/11/25 - 14:51:05 | 404 |     662.583µs |       127.0.0.1 | GET      "/metrics"
+[2025-11-25T14:51:10+03:00] GET /metrics 404 169.583µs 127.0.0.1 req-c098e721f4226c768c68a7fd63bde40f
+[GIN] 2025/11/25 - 14:51:10 | 404 |    1.035625ms |       127.0.0.1 | GET      "/metrics"
+[2025-11-25T14:51:15+03:00] GET /metrics 404 190.5µs 127.0.0.1 req-df04ac5bb8cd3c5310f2d85807f5124e
+[GIN] 2025/11/25 - 14:51:15 | 404 |     716.917µs |       127.0.0.1 | GET      "/metrics"
+[2025-11-25T14:51:20+03:00] GET /metrics 404 38.917µs 127.0.0.1 req-1ff376db3d59bb99f2049099e73d1535
+[GIN] 2025/11/25 - 14:51:20 | 404 |     102.209µs |       127.0.0.1 | GET      "/metrics"
+[2025-11-25T14:51:25+03:00] GET /metrics 404 16.042µs 127.0.0.1 req-fe6527a54744b7d3ab2e415faf21e396
+[GIN] 2025/11/25 - 14:51:25 | 404 |     190.667µs |       127.0.0.1 | GET      "/metrics"
+[2025-11-25T14:51:25+03:00] GET / 404 898.875µs ::1 req-14232fc99937c8881b79d0318cdb0a41
+[GIN] 2025/11/25 - 14:51:25 | 404 |   12.830125ms |             ::1 | GET      "/"
+[2025-11-25T14:51:26+03:00] GET /favicon.ico 404 433.541µs ::1 req-8877ddbee0d512c86b056b9368a0b847
+[GIN] 2025/11/25 - 14:51:26 | 404 |       670.5µs |             ::1 | GET      "/favicon.ico"
+[2025-11-25T14:51:30+03:00] GET /metrics 404 154.417µs 127.0.0.1 req-a031270041bfef88f09407dc129b39b4
+[GIN] 2025/11/25 - 14:51:30 | 404 |     291.458µs |       127.0.0.1 | GET      "/metrics"
+[2025-11-25T14:51:35+03:00] GET /metrics 404 122.25µs 127.0.0.1 req-cbddaf56bd78b134affce8116dee425c
+[GIN] 2025/11/25 - 14:51:35 | 404 |       721.5µs |       127.0.0.1 | GET      "/metrics"
+[2025-11-25T14:51:40+03:00] GET /metrics 404 191.208µs 127.0.0.1 req-de8fc260f1f3f295a09a5f99c9740432
+[GIN] 2025/11/25 - 14:51:40 | 404 |     542.208µs |       127.0.0.1 | GET      "/metrics"
+[2025-11-25T14:51:45+03:00] GET /metrics 404 149.708µs 127.0.0.1 req-010f7058f1ccce1d47b040ef5cf67d3e
+[GIN] 2025/11/25 - 14:51:45 | 404 |     487.916µs |       127.0.0.1 | GET      "/metrics"
+[2025-11-25T14:51:50+03:00] GET /metrics 404 106.5µs 127.0.0.1 req-7ed03359004adfc788611fc8867c75d9
+[GIN] 2025/11/25 - 14:51:50 | 404 |      428.75µs |       127.0.0.1 | GET      "/metrics"
+[2025-11-25T14:51:55+03:00] GET /metrics 404 111.792µs 127.0.0.1 req-5c3d0626f46b12eba5a0994ea7bedd95
+[GIN] 2025/11/25 - 14:51:55 | 404 |     253.291µs |       127.0.0.1 | GET      "/metrics"
+[2025-11-25T14:52:00+03:00] GET /metrics 404 231.167µs 127.0.0.1 req-cf7e55c56df512576566e41afd096d1a
+[GIN] 2025/11/25 - 14:52:00 | 404 |     633.375µs |       127.0.0.1 | GET      "/metrics"
+[2025-11-25T14:52:05+03:00] GET /metrics 404 981.708µs 127.0.0.1 req-bba4c1c424a8fbf1d8d5e6026882b2a0
+[GIN] 2025/11/25 - 14:52:05 | 404 |    1.256042ms |       127.0.0.1 | GET      "/metrics"
+[2025-11-25T14:52:10+03:00] GET /metrics 404 264.958µs 127.0.0.1 req-e344ba7bb63889b2aa862ebc8054d041
+[GIN] 2025/11/25 - 14:52:10 | 404 |     738.625µs |       127.0.0.1 | GET      "/metrics"
+[2025-11-25T14:52:15+03:00] GET /metrics 404 151.542µs 127.0.0.1 req-b0daee642006fd490a93f6a58d8c045c
+[GIN] 2025/11/25 - 14:52:15 | 404 |     301.916µs |       127.0.0.1 | GET      "/metrics"
+[2025-11-25T14:52:20+03:00] GET /metrics 404 483.083µs 127.0.0.1 req-80bf98e766b544012a6102a03741324d
+[GIN] 2025/11/25 - 14:52:20 | 404 |      911.75µs |       127.0.0.1 | GET      "/metrics"
+[2025-11-25T14:52:25+03:00] GET /metrics 404 545.917µs 127.0.0.1 req-5674c68adf017b57ed2084b7dbc185bc
+[GIN] 2025/11/25 - 14:52:25 | 404 |     851.375µs |       127.0.0.1 | GET      "/metrics"
+[2025-11-25T14:52:30+03:00] GET /metrics 404 792.042µs 127.0.0.1 req-42d4ccd96ccd1eeaf74d753e836f50bc
+[GIN] 2025/11/25 - 14:52:30 | 404 |     955.625µs |       127.0.0.1 | GET      "/metrics"
+[2025-11-25T14:52:35+03:00] GET /metrics 404 1.1465ms 127.0.0.1 req-16b930630f7d6f5173af63c40163d562
+[GIN] 2025/11/25 - 14:52:35 | 404 |    1.417083ms |       127.0.0.1 | GET      "/metrics"
+[2025-11-25T14:52:40+03:00] GET /metrics 404 33.541µs 127.0.0.1 req-7f15244cf8fe32e4b4353d2515cc445f
+[GIN] 2025/11/25 - 14:52:40 | 404 |      193.25µs |       127.0.0.1 | GET      "/metrics"
+[2025-11-25T14:52:45+03:00] GET /metrics 404 118.25µs 127.0.0.1 req-8ace21d1919467efb4f793c795730733
+[GIN] 2025/11/25 - 14:52:45 | 404 |     287.667µs |       127.0.0.1 | GET      "/metrics"
+[2025-11-25T14:52:50+03:00] GET /metrics 404 27.833µs 127.0.0.1 req-d49413bfe932a32526d4d29156385597
+[GIN] 2025/11/25 - 14:52:50 | 404 |     888.167µs |       127.0.0.1 | GET      "/metrics"
+[2025-11-25T14:52:55+03:00] GET /metrics 404 65.291µs 127.0.0.1 req-a0aefb93704454b3dd20df37bb052b80
+[GIN] 2025/11/25 - 14:52:55 | 404 |      234.75µs |       127.0.0.1 | GET      "/metrics"
+[2025-11-25T14:53:00+03:00] GET /metrics 404 586.167µs 127.0.0.1 req-83c73ed173ab865cb169a75b4d46daeb
+[GIN] 2025/11/25 - 14:53:00 | 404 |     769.208µs |       127.0.0.1 | GET      "/metrics"
+[2025-11-25T14:53:05+03:00] GET /metrics 404 701.916µs 127.0.0.1 req-5c265ed4e0d371ff8d59c5a5f093e12e
+[GIN] 2025/11/25 - 14:53:05 | 404 |    1.246667ms |       127.0.0.1 | GET      "/metrics"
+[2025-11-25T14:53:10+03:00] GET /metrics 404 16.416µs 127.0.0.1 req-7dc82b53b7c5813807731c9e902873d0
+[GIN] 2025/11/25 - 14:53:10 | 404 |      89.417µs |       127.0.0.1 | GET      "/metrics"
+[2025-11-25T14:53:15+03:00] GET /metrics 404 83.375µs 127.0.0.1 req-51cc05bd32ad7c7a4271e89d9c6208e5
+[GIN] 2025/11/25 - 14:53:15 | 404 |       317.5µs |       127.0.0.1 | GET      "/metrics"
+[2025-11-25T14:53:20+03:00] GET /metrics 404 166.875µs 127.0.0.1 req-0bb3443a4c475bc83dce65da4592cda2
+[GIN] 2025/11/25 - 14:53:20 | 404 |       382.5µs |       127.0.0.1 | GET      "/metrics"
+[2025-11-25T14:53:25+03:00] GET /metrics 404 1.307875ms 127.0.0.1 req-2beeda691d639db31c05c837a8b77fa9
+[GIN] 2025/11/25 - 14:53:25 | 404 |      3.0355ms |       127.0.0.1 | GET      "/metrics"
+[2025-11-25T14:53:30+03:00] GET /metrics 404 153.208µs 127.0.0.1 req-ff2ef07cc7853c27022b1bbed7c02bf0
+[GIN] 2025/11/25 - 14:53:30 | 404 |     390.667µs |       127.0.0.1 | GET      "/metrics"
+[2025-11-25T14:53:35+03:00] GET /metrics 404 129.625µs 127.0.0.1 req-9535bfc4ee773cca5a6f628273096d6a
+[GIN] 2025/11/25 - 14:53:35 | 404 |     656.125µs |       127.0.0.1 | GET      "/metrics"
+[2025-11-25T14:53:40+03:00] GET /metrics 404 47.292µs 127.0.0.1 req-b50bd1f33fac19fc40ce72a2cfcbebdc
+[GIN] 2025/11/25 - 14:53:40 | 404 |     192.125µs |       127.0.0.1 | GET      "/metrics"
+[2025-11-25T14:53:45+03:00] GET /metrics 404 172.916µs 127.0.0.1 req-b820ad97060f41c08520f1e98f4ae307
+[GIN] 2025/11/25 - 14:53:45 | 404 |    1.141084ms |       127.0.0.1 | GET      "/metrics"
+[2025-11-25T14:53:50+03:00] GET /metrics 404 19.042µs 127.0.0.1 req-18c15df51db6e465528d3abf1ca968fd
+[GIN] 2025/11/25 - 14:53:50 | 404 |      83.709µs |       127.0.0.1 | GET      "/metrics"
+[2025-11-25T14:53:55+03:00] GET /metrics 404 61.916µs 127.0.0.1 req-5b6ae813c3385629b92981606d32ae8d
+[GIN] 2025/11/25 - 14:53:55 | 404 |     177.375µs |       127.0.0.1 | GET      "/metrics"
+[2025-11-25T14:54:00+03:00] GET /metrics 404 69.042µs 127.0.0.1 req-34045c6cc946b61869c72f192d5274ff
+[GIN] 2025/11/25 - 14:54:00 | 404 |     640.333µs |       127.0.0.1 | GET      "/metrics"
+[2025-11-25T14:54:05+03:00] GET /metrics 404 47.667µs 127.0.0.1 req-a71f949a3a07a0a867db5758410ec8da
+[GIN] 2025/11/25 - 14:54:05 | 404 |     197.166µs |       127.0.0.1 | GET      "/metrics"
+[2025-11-25T14:54:10+03:00] GET /metrics 404 84.833µs 127.0.0.1 req-4a6f26d2df7029fb173c5c6459970be5
+[GIN] 2025/11/25 - 14:54:10 | 404 |     476.958µs |       127.0.0.1 | GET      "/metrics"
+[2025-11-25T14:54:15+03:00] GET /metrics 404 48.833µs 127.0.0.1 req-88fcad7b825966e5da87d1e6cc668312
+[GIN] 2025/11/25 - 14:54:15 | 404 |     132.541µs |       127.0.0.1 | GET      "/metrics"
+[2025-11-25T14:54:20+03:00] GET /metrics 404 32.5µs 127.0.0.1 req-b70bc6534c4bc54fc2a917dc8c92f209
+[GIN] 2025/11/25 - 14:54:20 | 404 |     226.917µs |       127.0.0.1 | GET      "/metrics"
+[2025-11-25T14:54:25+03:00] GET /metrics 404 191.333µs 127.0.0.1 req-f9a257d32d6d0a8bfd28b7881cb8d853
+[GIN] 2025/11/25 - 14:54:25 | 404 |     563.292µs |       127.0.0.1 | GET      "/metrics"
+[2025-11-25T14:54:30+03:00] GET /metrics 404 102.292µs 127.0.0.1 req-73475d0a2c07ec742a997856f51debf3
+[GIN] 2025/11/25 - 14:54:30 | 404 |     243.875µs |       127.0.0.1 | GET      "/metrics"
+[2025-11-25T14:54:35+03:00] GET /metrics 404 29.458µs 127.0.0.1 req-7a1d2b694ac018365878bae9c82c18bf
+[GIN] 2025/11/25 - 14:54:35 | 404 |     335.208µs |       127.0.0.1 | GET      "/metrics"
+[2025-11-25T14:54:40+03:00] GET /metrics 404 46.875µs 127.0.0.1 req-2db622e7a8270eed8d2c460f2618a928
+[GIN] 2025/11/25 - 14:54:40 | 404 |     140.666µs |       127.0.0.1 | GET      "/metrics"
+[2025-11-25T14:54:45+03:00] GET /metrics 404 70.125µs 127.0.0.1 req-9d5a3ee2e5882a85b688d17989247100
+[GIN] 2025/11/25 - 14:54:45 | 404 |     243.083µs |       127.0.0.1 | GET      "/metrics"
+[2025-11-25T14:54:50+03:00] GET /metrics 404 82.584µs 127.0.0.1 req-a57c7553fbfc8ddbc907f5ae036bd162
+[GIN] 2025/11/25 - 14:54:50 | 404 |     247.042µs |       127.0.0.1 | GET      "/metrics"
+[2025-11-25T14:54:55+03:00] GET /metrics 404 61.041µs 127.0.0.1 req-a545ceb229e6ab1f2980184462770b19
+[GIN] 2025/11/25 - 14:54:55 | 404 |     154.083µs |       127.0.0.1 | GET      "/metrics"
+[2025-11-25T14:55:00+03:00] GET /metrics 404 59.25µs 127.0.0.1 req-3287d0267c2274a4e60f3843ac255629
+[GIN] 2025/11/25 - 14:55:00 | 404 |     527.541µs |       127.0.0.1 | GET      "/metrics"
+[2025-11-25T14:55:05+03:00] GET /metrics 404 625.542µs 127.0.0.1 req-219c1c249dfa958fb277330a6bdd3f08
+[GIN] 2025/11/25 - 14:55:05 | 404 |    1.318125ms |       127.0.0.1 | GET      "/metrics"
+[2025-11-25T14:55:10+03:00] GET /metrics 404 64.791µs 127.0.0.1 req-ed1e60a4c35e2fc451e7dabbaadf298f
+[GIN] 2025/11/25 - 14:55:10 | 404 |     265.584µs |       127.0.0.1 | GET      "/metrics"
+[2025-11-25T14:55:15+03:00] GET /metrics 404 93.084µs 127.0.0.1 req-52ca389532031c4a12a0ed8b1da3037d
+[GIN] 2025/11/25 - 14:55:15 | 404 |      265.75µs |       127.0.0.1 | GET      "/metrics"
+[2025-11-25T14:55:20+03:00] GET /metrics 404 133.417µs 127.0.0.1 req-6ccdedde882d6fc149cf975629e8aa2d
+[GIN] 2025/11/25 - 14:55:20 | 404 |     647.833µs |       127.0.0.1 | GET      "/metrics"
+[2025-11-25T14:55:25+03:00] GET /metrics 404 134.584µs 127.0.0.1 req-0d5c8787c723d26b71bafe3e841e6a62
+[GIN] 2025/11/25 - 14:55:25 | 404 |     342.375µs |       127.0.0.1 | GET      "/metrics"
+[2025-11-25T14:55:30+03:00] GET /metrics 404 674.291µs 127.0.0.1 req-fd65a25ec8c2e4a87466ff3a6e55f843
+[GIN] 2025/11/25 - 14:55:30 | 404 |    1.774208ms |       127.0.0.1 | GET      "/metrics"
+[2025-11-25T14:55:35+03:00] GET /metrics 404 112µs 127.0.0.1 req-4ba64d75cd4970dcff8026e24ecd9f0e
+[GIN] 2025/11/25 - 14:55:35 | 404 |      341.25µs |       127.0.0.1 | GET      "/metrics"
+[2025-11-25T14:55:40+03:00] GET /metrics 404 67.708µs 127.0.0.1 req-98cf8b48f34d239033e6c6facca5a76b
+[GIN] 2025/11/25 - 14:55:40 | 404 |     664.083µs |       127.0.0.1 | GET      "/metrics"
+[2025-11-25T14:55:45+03:00] GET /metrics 404 99.708µs 127.0.0.1 req-a881780f41f987a63aa29e888094cea5
+[GIN] 2025/11/25 - 14:55:45 | 404 |     554.083µs |       127.0.0.1 | GET      "/metrics"
+[2025-11-25T14:55:50+03:00] GET /metrics 404 191.333µs 127.0.0.1 req-9578ff4434f99413172b329715bec0d5
+[GIN] 2025/11/25 - 14:55:50 | 404 |      463.75µs |       127.0.0.1 | GET      "/metrics"
+[2025-11-25T14:55:55+03:00] GET /metrics 404 105.875µs 127.0.0.1 req-0082eb92b8a384760f901b74a096d06f
+[GIN] 2025/11/25 - 14:55:55 | 404 |       216.5µs |       127.0.0.1 | GET      "/metrics"
+[2025-11-25T14:56:00+03:00] GET /metrics 404 1.212167ms 127.0.0.1 req-46593647cc411d41091338fa648688c9
+[GIN] 2025/11/25 - 14:56:00 | 404 |      2.1385ms |       127.0.0.1 | GET      "/metrics"
+[2025-11-25T14:56:05+03:00] GET /metrics 404 22.583µs 127.0.0.1 req-3b4b9d01afc140f2f313617ccc6a6a06
+[GIN] 2025/11/25 - 14:56:05 | 404 |     111.708µs |       127.0.0.1 | GET      "/metrics"
+[2025-11-25T14:56:10+03:00] GET /metrics 404 104.083µs 127.0.0.1 req-6ac951f1c00711b42fe11223e9416a3d
+[GIN] 2025/11/25 - 14:56:10 | 404 |     329.583µs |       127.0.0.1 | GET      "/metrics"
