@@ -1,7 +1,8 @@
 
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useApp } from '../App';
-import { MeasurementProject, MeasurementFloor, MeasurementRoom, MeasurementPoint, MeasurementOpening, ManualMeasurementStats, ManualWall, ManualOpening, AutoRectData, AutoRectOpening } from '../types';
+import { MeasurementProject, MeasurementFloor, MeasurementRoom, MeasurementPoint, MeasurementOpening, ManualMeasurementStats, ManualWall, ManualOpening, AutoRectData, AutoRectOpening, MeasurementCalcSnapshot } from '../types';
+import { calculateRoomSnapshot } from '../services/measurementMath';
 import { 
   Ruler, Plus, Maximize, Layers, Layout, MousePointer2, 
   Trash2, Save, ChevronDown, Calculator, Edit2, X, 
@@ -553,73 +554,35 @@ const AutoRectRoomForm = ({ room, onUpdateRoom }: { room: MeasurementRoom, onUpd
 
 // 5. Metrics Panel
 const MetricsPanel = ({ room }: { room: MeasurementRoom }) => {
-    let floorArea = 0, perimeter = 0, wallAreaNet = 0, volume = 0, openingsArea = 0;
+    const calc = room.calculations || calculateRoomSnapshot(room);
     
-    // Logic extraction
-    if (room.mode === 'manual' && room.manualWalls) {
-        perimeter = room.manualWalls.reduce((acc, w) => acc + w.length, 0) / 1000;
-        const heightM = room.height / 1000;
-        const wallsAreaGross = perimeter * heightM;
-        openingsArea = room.manualWalls.reduce((acc, w) => {
-            return acc + w.openings.reduce((sum, op) => sum + ((op.width * op.height) / 1000000), 0);
-        }, 0);
-        wallAreaNet = Math.max(0, wallsAreaGross - openingsArea);
-        
-        // Approx floor area
-        const points: MeasurementPoint[] = [{x:0,y:0}];
-        let curX=0, curY=0;
-        room.manualWalls.forEach(w => {
-            const len = w.length / 1000;
-            if(w.direction === 'Right') curX += len;
-            if(w.direction === 'Left') curX -= len;
-            if(w.direction === 'Up') curY -= len;
-            if(w.direction === 'Down') curY += len;
-            points.push({x: curX, y: curY});
-        });
-        let area = 0;
-        for(let i=0; i<points.length-1; i++){
-            area += points[i].x * points[i+1].y;
-            area -= points[i+1].x * points[i].y;
-        }
-        area += points[points.length-1].x * points[0].y;
-        area -= points[0].x * points[points.length-1].y;
-        floorArea = Math.abs(area) / 2;
-        volume = floorArea * heightM;
-
-    } else if (room.mode === 'auto_rect' && room.autoRectData) {
-        const { length, width, height, openings } = room.autoRectData;
-        const lM = length / 1000;
-        const wM = width / 1000;
-        const hM = height / 1000;
-        
-        floorArea = lM * wM;
-        perimeter = (lM + wM) * 2;
-        const wallsAreaGross = perimeter * hM;
-        openingsArea = openings.reduce((acc, op) => acc + ((op.width * op.height)/1000000), 0);
-        wallAreaNet = Math.max(0, wallsAreaGross - openingsArea);
-        volume = floorArea * hM;
-
-    } else {
-        // Drawing
-        floorArea = calculatePolygonAreaM2(room.points);
-        perimeter = calculatePerimeterM(room.points);
-        const heightM = room.height / 1000;
-        openingsArea = room.openings.reduce((sum, op) => sum + ((op.width * op.height) / 1000000), 0);
-        wallAreaNet = Math.max(0, (perimeter * heightM) - openingsArea);
-        volume = floorArea * heightM;
-    }
+    const { 
+        floorArea, perimeter, wallAreaNet, roomVolume, openingsArea,
+        ceilingArea, wallHeight, wallAreaGross, doorCount, windowCount,
+        doorArea, windowArea, windowSillLength, slopeLength
+    } = calc;
 
     const exportData = () => {
         const text = `
 Экспорт измерений: ${room.name}
 -----------------------------
 Площадь пола: ${floorArea.toFixed(2)} м2
+Площадь потолка: ${ceilingArea.toFixed(2)} м2
 Периметр: ${perimeter.toFixed(2)} м
-Стены (нетто): ${wallAreaNet.toFixed(2)} м2
-Проемы: ${openingsArea.toFixed(2)} м2
-Объем: ${volume.toFixed(2)} м3
+Высота стен: ${wallHeight.toFixed(2)} м
+Площадь стен (брутто): ${wallAreaGross.toFixed(2)} м2
+Площадь стен (нетто): ${wallAreaNet.toFixed(2)} м2
+Объем: ${roomVolume.toFixed(2)} м3
+Площадь проемов: ${openingsArea.toFixed(2)} м2
+-----------------------------
+Кол-во дверей: ${doorCount}
+Площадь дверей: ${doorArea.toFixed(2)} м2
+Кол-во окон: ${windowCount}
+Площадь окон: ${windowArea.toFixed(2)} м2
+Длина подоконников: ${windowSillLength.toFixed(2)} м
+Длина откосов: ${slopeLength.toFixed(2)} м
         `.trim();
-        const blob = new Blob([text], {type: 'text/plain'});
+        const blob = new Blob([text], {type: 'text/plain;charset=utf-8'});
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
@@ -634,7 +597,7 @@ const MetricsPanel = ({ room }: { room: MeasurementRoom }) => {
                  <button onClick={exportData} className="text-blue-600 hover:bg-blue-50 p-1 rounded" title="Экспорт"><Download size={16}/></button>
              </div>
              
-             <div className="space-y-4 flex-1">
+             <div className="space-y-4 flex-1 overflow-y-auto pr-1">
                  <div className="grid grid-cols-2 gap-3">
                      <div className="bg-slate-50 p-3 rounded-lg border border-slate-100">
                          <div className="text-xs text-slate-500 mb-1">Площадь пола</div>
@@ -655,11 +618,27 @@ const MetricsPanel = ({ room }: { room: MeasurementRoom }) => {
                      </div>
                      <div className="flex justify-between py-1 border-b border-slate-50">
                          <span className="text-slate-500">Объем</span>
-                         <span className="font-medium">{volume.toFixed(2)} м3</span>
+                         <span className="font-medium">{roomVolume.toFixed(2)} м3</span>
+                     </div>
+                     <div className="flex justify-between py-1 border-b border-slate-50">
+                         <span className="text-slate-500">Площадь потолка</span>
+                         <span className="font-medium">{ceilingArea.toFixed(2)} м2</span>
+                     </div>
+                     <div className="flex justify-between py-1 border-b border-slate-50">
+                         <span className="text-slate-500">Площадь стен (брутто)</span>
+                         <span className="font-medium">{wallAreaGross.toFixed(2)} м2</span>
                      </div>
                      <div className="flex justify-between py-1 border-b border-slate-50">
                          <span className="text-slate-500">Площадь проемов</span>
                          <span className="font-medium text-red-500">-{openingsArea.toFixed(2)} м2</span>
+                     </div>
+                     <div className="flex justify-between py-1 border-b border-slate-50">
+                         <span className="text-slate-500">Откосы (длина)</span>
+                         <span className="font-medium">{slopeLength.toFixed(2)} м</span>
+                     </div>
+                     <div className="flex justify-between py-1 border-b border-slate-50">
+                         <span className="text-slate-500">Подоконники</span>
+                         <span className="font-medium">{windowSillLength.toFixed(2)} м</span>
                      </div>
                  </div>
              </div>
@@ -679,6 +658,11 @@ export const Measurements = () => {
 
   useEffect(() => {
       if (selectedProjectId && !activeMeasurement) {
+          const initRoom: MeasurementRoom = {
+              id: uuidv4(), name: 'Помещение 1', height: 2700, points: [], openings: [], mode: 'drawing', manualWalls: []
+          };
+          initRoom.calculations = calculateRoomSnapshot(initRoom);
+
           const newMp: MeasurementProject = {
               id: uuidv4(),
               projectId: selectedProjectId,
@@ -687,9 +671,7 @@ export const Measurements = () => {
               floors: [{
                   id: uuidv4(),
                   name: '1 Этаж',
-                  rooms: [{
-                      id: uuidv4(), name: 'Помещение 1', height: 2700, points: [], openings: [], mode: 'drawing', manualWalls: []
-                  }]
+                  rooms: [initRoom]
               }]
           };
           addMeasurementProject(newMp);
@@ -708,13 +690,18 @@ export const Measurements = () => {
 
   const updateRoom = (updatedRoom: MeasurementRoom) => {
       if (!activeMeasurement || !activeFloor) return;
+      
+      // Calculate and persist snapshot
+      const snapshot = calculateRoomSnapshot(updatedRoom);
+      const roomWithCalc = { ...updatedRoom, calculations: snapshot };
+
       const newFloors = activeMeasurement.floors.map(f => {
           if (f.id === activeFloorId) {
-              return { ...f, rooms: f.rooms.map(r => r.id === activeRoomId ? updatedRoom : r) };
+              return { ...f, rooms: f.rooms.map(r => r.id === activeRoomId ? roomWithCalc : r) };
           }
           return f;
       });
-      updateMeasurementProject({ ...activeMeasurement, floors: newFloors });
+      updateMeasurementProject({ ...activeMeasurement, floors: newFloors, updated_at: new Date().toISOString() });
   };
 
   const addRoom = () => {
@@ -722,10 +709,13 @@ export const Measurements = () => {
       const newRoom: MeasurementRoom = {
           id: uuidv4(), name: `Новое помещение`, height: 2700, points: [], openings: [], mode: 'drawing', manualWalls: []
       };
+      // Initial calc
+      newRoom.calculations = calculateRoomSnapshot(newRoom);
+
       const newFloors = activeMeasurement.floors.map(f => 
           f.id === activeFloorId ? { ...f, rooms: [...f.rooms, newRoom] } : f
       );
-      updateMeasurementProject({ ...activeMeasurement, floors: newFloors });
+      updateMeasurementProject({ ...activeMeasurement, floors: newFloors, updated_at: new Date().toISOString() });
       setActiveRoomId(newRoom.id);
   };
 

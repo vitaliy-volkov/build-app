@@ -7,6 +7,7 @@ import {
 } from '../types';
 import { AIService } from '../services/aiService';
 import { AINotificationService } from '../services/aiNotificationService';
+import { calculateRoomSnapshot } from '../services/measurementMath';
 import { 
   ChevronDown, ChevronRight, Plus, Trash2, Copy, 
   Settings, Check, Lock, Send,
@@ -1026,57 +1027,18 @@ const AddFromTemplateForm = ({ templates, onAdd, onCancel }: any) => {
         </div>
     );
 };
-
 const calculateMetric = (room: MeasurementRoom, metric: string): number => {
-    // 1. Try Manual Stats first
-    if (room.mode === 'manual' && room.manualStats) {
-        switch (metric) {
-            case 'floor_area': return room.manualStats.floorArea;
-            case 'ceiling_area': return room.manualStats.ceilingArea;
-            case 'perimeter': return room.manualStats.perimeter;
-            case 'wall_area_net': return room.manualStats.wallAreaNet;
-            case 'wall_height': return room.manualStats.wallHeight;
-            default: return 0;
-        }
-    }
+    // Use the persisted snapshot if available, otherwise calculate on the fly
+    const calc = room.calculations || calculateRoomSnapshot(room);
 
-    // 2. Fallback to Drawing Mode (simplified)
-    if (room.points && room.points.length > 2) {
-         // shoelace formula for area
-         let area = 0;
-         for (let i = 0; i < room.points.length; i++) {
-             const j = (i + 1) % room.points.length;
-             area += room.points[i].x * room.points[j].y;
-             area -= room.points[j].x * room.points[i].y;
-         }
-         area = Math.abs(area) / 2;
-         
-         // perimeter
-         let perimeter = 0;
-         for (let i = 0; i < room.points.length; i++) {
-            const j = (i + 1) % room.points.length;
-            const dx = room.points[j].x - room.points[i].x;
-            const dy = room.points[j].y - room.points[i].y;
-            perimeter += Math.sqrt(dx*dx + dy*dy);
-         }
-
-         const areaM2 = area / 1000000;
-         const perimeterM = perimeter / 1000;
-         const wallHeightM = room.height / 1000;
-         const wallAreaGross = perimeterM * wallHeightM;
-         const openingsArea = room.openings.reduce((sum, o) => sum + (o.width * o.height), 0) / 1000000;
-         
-         switch (metric) {
-            case 'floor_area': return Number(areaM2.toFixed(2));
-            case 'ceiling_area': return Number(areaM2.toFixed(2));
-            case 'perimeter': return Number(perimeterM.toFixed(2));
-            case 'wall_area_net': return Number((wallAreaGross - openingsArea).toFixed(2));
-            case 'wall_height': return Number(wallHeightM.toFixed(2));
-            default: return 0;
-         }
+    switch (metric) {
+        case "floor_area": return Number(calc.floorArea.toFixed(2));
+        case "ceiling_area": return Number(calc.ceilingArea.toFixed(2));
+        case "perimeter": return Number(calc.perimeter.toFixed(2));
+        case "wall_area_net": return Number(calc.wallAreaNet.toFixed(2));
+        case "wall_height": return Number(calc.wallHeight.toFixed(2));
+        default: return 0;
     }
-    
-    return 0;
 };
 
 const CalcBindingModal = ({ isOpen, onClose, onConfirm, calcTypes, rooms }: any) => {

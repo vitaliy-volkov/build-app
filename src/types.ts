@@ -774,6 +774,8 @@ export interface MeasurementOpening {
   height: number; // mm
   distanceFromStart: number; // mm from the starting point of the wall segment
   wallIndex: number; // Index of the starting point of the wall segment in the room points array
+  depth?: number; // mm (wall thickness)
+  distanceFromFloor?: number; // mm
 }
 
 // Auto Rectangle Mode Types
@@ -800,6 +802,8 @@ export interface ManualOpening {
   width: number; // mm
   height: number; // mm
   distanceFromStart: number; // mm
+  depth?: number; // mm
+  distanceFromFloor?: number; // mm
 }
 
 export interface ManualWall {
@@ -817,6 +821,23 @@ export interface ManualMeasurementStats {
   wallAreaNet: number; // m2 (minus openings)
   skirtingPerimeter?: number; // m
   openingsArea?: number; // m2
+}
+
+export interface MeasurementCalcSnapshot {
+  floorArea: number; // m2
+  ceilingArea: number; // m2
+  perimeter: number; // m
+  wallHeight: number; // m
+  wallAreaGross: number; // m2
+  wallAreaNet: number; // m2 (minus openings)
+  roomVolume: number; // m3
+  openingsArea: number; // m2
+  doorCount: number;
+  windowCount: number;
+  doorArea: number; // m2
+  windowArea: number; // m2
+  windowSillLength: number; // m
+  slopeLength: number; // m
 }
 
 export interface MeasurementRoom {
@@ -837,6 +858,9 @@ export interface MeasurementRoom {
   
   // Manual Wall Definitions
   manualWalls?: ManualWall[];
+
+  // Calculation Snapshot
+  calculations?: MeasurementCalcSnapshot;
 }
 
 export interface MeasurementFloor {
