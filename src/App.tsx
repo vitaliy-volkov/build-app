@@ -46,6 +46,7 @@ import { Blog, BlogPost } from './pages/Blog';
 import { v4 as uuidv4 } from 'uuid';
 import { ArrowRight } from 'lucide-react';
 import { apiClient, AuthProvider, useAuth } from './services/apiClient';
+import { AppProviders } from './providers/AppProviders';
 
 // --- State Management (Context) ---
 interface AppState {
@@ -596,7 +597,7 @@ const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
           id: uuidv4(),
           name: lead.description ? lead.description.split('.')[0] : `Проект ${lead.name}`,
           address: lead.address || 'Адрес не указан',
-          contract_num: 'Б/Н',
+          contract_number: 'Б/Н',
           contract_date: new Date().toISOString().split('T')[0],
           description: lead.description || '',
           customer_id: newClient.id,
@@ -646,7 +647,7 @@ const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
         id: newProjectId,
         name: projectData.name || 'Новый проект из шаблона',
         address: projectData.address || '',
-        contract_num: projectData.contract_num || '',
+        contract_number: projectData.contract_number || '',
         contract_date: projectData.contract_date || new Date().toISOString().split('T')[0],
         description: template.description,
         customer_id: projectData.customer_id || '',
@@ -960,14 +961,14 @@ const ScrollToTop = () => {
 
 export const App: React.FC = () => {
   return (
-    <AuthProvider>
+    <AppProviders>
       <AppProvider>
         <HashRouter>
           <ScrollToTop />
           <AppRoutes />
         </HashRouter>
       </AppProvider>
-    </AuthProvider>
+    </AppProviders>
   );
 };
 

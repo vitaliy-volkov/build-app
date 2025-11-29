@@ -169,7 +169,7 @@ export const MOCK_PROJECTS: Project[] = [
     id: 'proj-1',
     name: 'ЖК "Северное Сияние", Корпус 1',
     address: 'г. Москва, ул. Ленина, д. 1',
-    contract_num: 'K-2023/10-01',
+    contract_number: 'K-2023/10-01',
     contract_date: '2023-10-01',
     description: 'Монолитные работы и кладка стен',
     customer_id: 'cp-1',

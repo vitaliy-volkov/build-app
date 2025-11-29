@@ -31,6 +31,18 @@ const validatePassword = (password: string): string | null => {
   return null;
 };
 
+// Маппинг UserRole (русские значения) -> backend roles (английские строки)
+const roleMap = {
+  "Директор": "director",
+  "Администратор": "admin",
+  "Прораб": "foreman",
+  "Руководитель проекта": "project_manager",
+  "Сметчик": "estimator",
+  "Снабженец": "supply_manager",
+  "Заказчик": "client",
+  "Менеджер": "manager"
+};
+
 export const Auth = () => {
   const { login, register } = useAuth();
   const navigate = useNavigate();
@@ -75,11 +87,12 @@ export const Auth = () => {
         }
 
         // Регистрация
+        const backendRole = roleMap[UserRole.Director] || 'director';
         const success = await register({
           email,
           password,
           name,
-          role: UserRole.Director, // По умолчанию директор
+          role: backendRole,
         });
 
         if (success) {

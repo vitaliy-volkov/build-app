@@ -154,16 +154,19 @@ export enum ProjectStatus {
 
 export interface Project {
   id: string;
+  company_id?: string; // Added to match backend
   name: string;
   address: string;
-  contract_num: string;
+  contract_number: string; // Renamed from contract_num to match backend json:"contract_number"
   contract_date: string;
   description: string;
   customer_id: string;
   general_contractor_id: string;
   contact_person_id: string;
   status: ProjectStatus;
-  team: { user_id: string; role_in_project: string }[];
+  created_at?: string;
+  updated_at?: string;
+  team: { user_id: string; role: string; joined_at?: string }[]; // Adjusted to match backend ProjectMember
 }
 
 // --- Templates ---

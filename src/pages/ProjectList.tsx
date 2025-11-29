@@ -134,7 +134,7 @@ export const ProjectList = () => {
                   id: uuidv4(),
                   name: data.name!,
                   address: data.address!,
-                  contract_num: 'Б/Н',
+                  contract_number: 'Б/Н',
                   contract_date: new Date().toISOString().split('T')[0],
                   description: '',
                   customer_id: data.customer_id!,

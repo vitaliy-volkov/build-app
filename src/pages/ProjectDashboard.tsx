@@ -120,7 +120,7 @@ const ProjectOverviewModule = ({ project, estimates, payments, events, tasks, ch
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                         <div className="p-3 bg-slate-50 rounded-lg">
                             <span className="block text-xs text-slate-500 font-bold uppercase">Договор</span>
-                            <span className="font-medium text-slate-800">{project.contract_num}</span>
+                            <span className="font-medium text-slate-800">{project.contract_number}</span>
                         </div>
                         <div className="p-3 bg-slate-50 rounded-lg">
                             <span className="block text-xs text-slate-500 font-bold uppercase">Дата старта</span>
