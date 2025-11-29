@@ -1,5 +1,6 @@
 import { GoogleGenAI } from '@google/genai';
 import { LLMProvider } from '../types';
+import { runtimeConfig } from '../config/runtime';
 
 export type PromptPart = 
   | { type: 'text'; text: string }
@@ -39,7 +40,16 @@ export interface LLMAdapter {
 }
 
 const ensureApiKey = (ctx: AdapterContext) => {
-  const key = ctx.apiKey || process.env.API_KEY;
+  let key = ctx.apiKey;
+  
+  // Fallback to environment variables if not provided in context
+  if (!key) {
+    if (ctx.providerId === 'google') {
+      key = runtimeConfig.geminiApiKey;
+    }
+    // Add other providers here as they are added to runtimeConfig
+  }
+
   if (!key) {
     throw new Error('Не указан API ключ для выбранного провайдера.');
   }

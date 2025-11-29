@@ -5,9 +5,10 @@ import {
   EstimateStatus, VatMode, PaymentDirection, 
   AIConfiguration, AITaskType, CompanySettings
 } from '../types';
+import { runtimeConfig } from '../config/runtime';
 
 // API Base Configuration
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api/v1';
+const API_BASE_URL = runtimeConfig.apiUrl;
 
 // Types for API responses
 interface ApiResponse<T> {
