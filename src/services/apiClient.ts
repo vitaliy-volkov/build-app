@@ -5,7 +5,7 @@ import {
   EstimateStatus, VatMode, PaymentDirection, 
   AIConfiguration, AITaskType, CompanySettings
 } from '../types';
-import { MOCK_USERS, MOCK_PROJECTS, MOCK_COUNTERPARTIES, MOCK_ESTIMATES } from './mockData';
+import { MOCK_USERS, MOCK_PROJECTS, MOCK_COUNTERPARTIES, MOCK_ESTIMATES, MOCK_AI_CONFIG } from './mockData';
 import { v4 as uuidv4 } from 'uuid';
 
 // API Base Configuration
@@ -447,6 +447,34 @@ class ApiClient {
     sort_by?: string;
     sort_desc?: boolean;
   }): Promise<ApiResponse<PaginatedResponse<Company[]>>> {
+    if (USE_MOCK_API) {
+        // Extract unique companies from MOCK_USERS
+        const companiesMap = new Map<string, Company>();
+        MOCK_USERS.forEach(user => {
+            if (user.companies) {
+                user.companies.forEach(c => {
+                    if (!companiesMap.has(c.id)) {
+                        companiesMap.set(c.id, c as unknown as Company);
+                    }
+                });
+            }
+        });
+        const companies = Array.from(companiesMap.values());
+        
+        return {
+            success: true,
+            data: {
+                data: companies,
+                total: companies.length,
+                page: 1,
+                limit: 1000,
+                total_pages: 1,
+                has_next: false,
+                has_prev: false
+            }
+        };
+    }
+
     const queryParams = new URLSearchParams();
     if (params?.page) queryParams.append('page', params.page.toString());
     if (params?.limit) queryParams.append('limit', params.limit.toString());
@@ -458,10 +486,50 @@ class ApiClient {
   }
 
   async getCompany(id: string): Promise<ApiResponse<{ company: Company }>> {
+    if (USE_MOCK_API) {
+        // Search in MOCK_USERS
+        let foundCompany: Company | undefined;
+        for (const user of MOCK_USERS) {
+            if (user.companies) {
+                foundCompany = user.companies.find(c => c.id === id) as unknown as Company;
+                if (foundCompany) break;
+            }
+        }
+        
+        if (foundCompany) {
+            return { success: true, data: { company: foundCompany } };
+        }
+        // Fallback for newly created mock companies
+        return { 
+            success: true, 
+            data: { 
+                company: { 
+                    id, 
+                    name: 'Mock Company', 
+                    role: 'Director', 
+                    is_current: true 
+                } as unknown as Company 
+            } 
+        };
+    }
     return this.request<ApiResponse<{ company: Company }>>(`/companies/${id}`);
   }
 
   async createCompany(data: Partial<Company>): Promise<ApiResponse<{ company: Company }>> {
+    if (USE_MOCK_API) {
+        const newCompany = {
+            ...data,
+            id: uuidv4(),
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+        } as Company;
+        
+        return {
+            success: true,
+            data: { company: newCompany }
+        };
+    }
+
     return this.request<ApiResponse<{ company: Company }>>('/companies', {
       method: 'POST',
       body: JSON.stringify(data),
@@ -469,6 +537,12 @@ class ApiClient {
   }
 
   async updateCompany(id: string, data: Partial<Company>): Promise<ApiResponse<{ company: Company }>> {
+    if (USE_MOCK_API) {
+        return {
+            success: true,
+            data: { company: { ...data, id } as Company }
+        };
+    }
     return this.request<ApiResponse<{ company: Company }>>(`/companies/${id}`, {
       method: 'PUT',
       body: JSON.stringify(data),
@@ -664,10 +738,22 @@ class ApiClient {
 
   // AI Configuration
   async getAIConfiguration(): Promise<ApiResponse<AIConfiguration>> {
+    if (USE_MOCK_API) {
+        return {
+            success: true,
+            data: MOCK_AI_CONFIG
+        };
+    }
     return this.request<ApiResponse<AIConfiguration>>('/ai/configuration');
   }
 
   async updateAIConfiguration(config: AIConfiguration): Promise<ApiResponse<AIConfiguration>> {
+    if (USE_MOCK_API) {
+        return {
+            success: true,
+            data: config
+        };
+    }
     return this.request<ApiResponse<AIConfiguration>>('/ai/configuration', {
       method: 'PUT',
       body: JSON.stringify(config),
@@ -675,6 +761,12 @@ class ApiClient {
   }
 
   async testAIProvider(providerId: string): Promise<ApiResponse<{ status: string; message: string }>> {
+    if (USE_MOCK_API) {
+        return {
+            success: true,
+            data: { status: 'success', message: 'Mock provider test successful' }
+        };
+    }
     return this.request<ApiResponse<{ status: string; message: string }>>(`/ai/test/${providerId}`, {
       method: 'POST',
     });

@@ -14,7 +14,12 @@ export const api = axios.create({
 // Request Interceptor: Attach Token
 api.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
-    const token = localStorage.getItem('access_token');
+    let token: string | null = null;
+    try {
+      token = localStorage.getItem('access_token');
+    } catch (e) {
+      console.warn('LocalStorage access failed:', e);
+    }
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -34,7 +39,13 @@ api.interceptors.response.use(
       originalRequest._retry = true;
       
       try {
-        const refreshToken = localStorage.getItem('refresh_token');
+        let refreshToken: string | null = null;
+        try {
+            refreshToken = localStorage.getItem('refresh_token');
+        } catch (e) {
+            console.warn('LocalStorage access failed:', e);
+        }
+
         if (!refreshToken) {
           throw new Error('No refresh token');
         }
@@ -47,9 +58,13 @@ api.interceptors.response.use(
 
         const { access_token, refresh_token: newRefreshToken } = response.data.data; // Adjust based on actual backend response structure
 
-        localStorage.setItem('access_token', access_token);
-        if (newRefreshToken) {
-          localStorage.setItem('refresh_token', newRefreshToken);
+        try {
+            localStorage.setItem('access_token', access_token);
+            if (newRefreshToken) {
+              localStorage.setItem('refresh_token', newRefreshToken);
+            }
+        } catch (e) {
+            console.warn('LocalStorage save failed:', e);
         }
 
         // Update header and retry original request
@@ -57,8 +72,12 @@ api.interceptors.response.use(
         return api(originalRequest);
       } catch (refreshError) {
         // Refresh failed - logout user
-        localStorage.removeItem('access_token');
-        localStorage.removeItem('refresh_token');
+        try {
+            localStorage.removeItem('access_token');
+            localStorage.removeItem('refresh_token');
+        } catch (e) {
+            console.warn('LocalStorage clear failed:', e);
+        }
         window.location.href = '/login'; // Or use a more graceful redirect
         return Promise.reject(refreshError);
       }

@@ -147,8 +147,13 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false); // For mobile
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
     if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('sidebarCollapsed');
-      return saved ? JSON.parse(saved) : false;
+      try {
+        const saved = localStorage.getItem('sidebarCollapsed');
+        return saved ? JSON.parse(saved) : false;
+      } catch (e) {
+        console.warn('LocalStorage access failed:', e);
+        return false;
+      }
     }
     return false;
   });
@@ -183,7 +188,11 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
   const unreadCount = myNotifications.filter(n => !n.is_read).length;
 
   useEffect(() => {
-    localStorage.setItem('sidebarCollapsed', JSON.stringify(sidebarCollapsed));
+    try {
+      localStorage.setItem('sidebarCollapsed', JSON.stringify(sidebarCollapsed));
+    } catch (e) {
+      console.warn('LocalStorage save failed:', e);
+    }
   }, [sidebarCollapsed]);
 
   useEffect(() => {
