@@ -1,8 +1,8 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
+import { runtimeConfig } from '../config/runtime';
 
 // Define the API URL
-// In Vite, we use import.meta.env
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api/v1';
+const API_URL = runtimeConfig.apiUrl;
 
 export const api = axios.create({
   baseURL: API_URL,

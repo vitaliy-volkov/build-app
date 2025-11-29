@@ -46,12 +46,27 @@ pnpm install
 
 ### Настройка переменных окружения
 
-Создайте файл `.env.local` и добавьте необходимые API ключи:
+В проекте используются примеры конфигурационных файлов:
 
-```
-GEMINI_API_KEY=your_gemini_api_key
-# Другие API ключи по необходимости
-```
+- `.env.local.example` - шаблон для локальной разработки
+- `.env.production.example` - шаблон для продакшена (Vercel)
+
+**Локальная разработка:**
+1. Скопируйте `.env.local.example` в `.env.local`:
+   ```bash
+   cp .env.local.example .env.local
+   ```
+2. Заполните необходимые ключи (например, `VITE_GEMINI_API_KEY`).
+
+**Деплой на Vercel:**
+Проект настроен для автоматического деплоя на Vercel (см. `vercel.json`).
+В настройках проекта на Vercel (Settings > Environment Variables) необходимо добавить переменные, указанные в `.env.production.example`:
+
+- `VITE_API_URL` (URL бэкенда)
+- `VITE_WS_URL` (URL вебсокетов бэкенда)
+- `VITE_GEMINI_API_KEY` (API ключ Google Gemini)
+- `VITE_APP_ENV` (значение: production)
+- и другие необходимые переменные.
 
 ### Запуск в режиме разработки
 
