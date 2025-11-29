@@ -301,6 +301,19 @@ class ApiClient {
     return response;
   }
 
+  async forgotPassword(email: string): Promise<ApiResponse<{ message: string }>> {
+    if (USE_MOCK_API) {
+        return {
+            success: true,
+            data: { message: 'Если аккаунт существует, мы отправили код подтверждения.' }
+        };
+    }
+    return this.request<ApiResponse<{ message: string }>>('/auth/forgot-password', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    });
+  }
+
   async getCurrentUser(): Promise<ApiResponse<{ user: User }>> {
     if (USE_MOCK_API) {
       if (!this.token) {

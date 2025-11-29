@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { api } from '../../lib/api';
+import { apiClient } from '../../services/apiClient';
 import { LayoutDashboard, Mail, Lock, ArrowLeft, Loader2 } from 'lucide-react';
 
 export const ForgotPassword = () => {
@@ -13,7 +13,7 @@ export const ForgotPassword = () => {
     e.preventDefault();
     setStatus('loading');
     try {
-      await api.post('/auth/forgot-password', { email });
+      await apiClient.forgotPassword(email);
       setStatus('success');
       setMessage('Если аккаунт существует, мы отправили код подтверждения (см. консоль сервера для демо).');
     } catch (error: any) {
