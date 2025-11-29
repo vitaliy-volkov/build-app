@@ -5,10 +5,9 @@ import { Layout } from './components/Layout';
 import { PublicLayout } from './components/PublicLayout';
 import { AIAssistant } from './components/AIAssistant';
 import { LoadingState } from './components/LoadingState';
-import { useApiData } from './hooks/useApiData';
 import { 
-  MOCK_ESTIMATE_ITEMS, MOCK_PAYMENTS, MOCK_EVENTS,
-  MOCK_SUPPLY_REQUESTS, MOCK_DOCUMENTS,
+  MOCK_USERS, MOCK_PROJECTS, MOCK_ESTIMATES, MOCK_ESTIMATE_ITEMS, MOCK_PAYMENTS, MOCK_EVENTS,
+  MOCK_SUPPLY_REQUESTS, MOCK_DOCUMENTS, MOCK_COUNTERPARTIES,
   MOCK_NOTIFICATIONS, MOCK_ACTS, MOCK_PRICE_CATEGORIES, MOCK_PRICE_ITEMS,
   MOCK_DESIGN_FILES, MOCK_SPECIFICATIONS, MOCK_TASKS, MOCK_CHAT, MOCK_PHOTOSTREAM,
   MOCK_CASH_ACCOUNTS, MOCK_FINANCIAL_ARTICLES, MOCK_TRANSACTIONS, MOCK_LEADS,
@@ -46,6 +45,7 @@ import { About, Contacts } from './pages/InfoPages';
 import { Blog, BlogPost } from './pages/Blog';
 import { v4 as uuidv4 } from 'uuid';
 import { ArrowRight } from 'lucide-react';
+import { apiClient, AuthProvider, useAuth } from './services/apiClient';
 
 // --- State Management (Context) ---
 interface AppState {
@@ -181,6 +181,8 @@ interface AppState {
   // Settings Actions
   updateCompanySettings: (settings: CompanySettings) => void;
   updateAIConfig: (config: AIConfiguration) => void;
+  // Data initialization
+  initializeData: () => Promise<void>;
 }
 
 const AppContext = createContext<AppState | undefined>(undefined);
@@ -192,30 +194,125 @@ export const useApp = () => {
 };
 
 const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  // Используем состояние из AuthProvider через useAuth
+  const auth = useAuth();
+  const [isAuthenticated, setIsAuthenticated] = useState(auth.isAuthenticated);
+  const [currentUser, setCurrentUser] = useState(auth.user);
   
-  // Use API data hook for real data
-  const {
-    projects, users, estimates, estimateItems, counterparties, payments,
-    events, supplyRequests, documents, notifications, acts, priceListCategories,
-    priceListItems, designFiles, specifications, tasks, chatMessages, photoStream,
-    cashAccounts, financialArticles, transactions, leads, templates,
-    operationTemplates, operationTemplateItems, measurements, companySettings,
-    aiConfig, loading, isLoading, hasError, errors, setProjects, setUsers,
-    setEstimates, setCounterparties, setEstimateItems, setPayments, setEvents,
-    setSupplyRequests, setDocuments, setNotifications, setActs, setPriceListCategories,
-    setPriceListItems, setDesignFiles, setSpecifications, setTasks, setChatMessages,
-    setPhotoStream, setCashAccounts, setFinancialArticles, setTransactions,
-    setLeads, setTemplates, setOperationTemplates, setOperationTemplateItems,
-    setMeasurements, setCompanySettings, setAiConfig
-  } = useApiData();
+  // Синхронизация состояния с AuthProvider
+  useEffect(() => {
+    setIsAuthenticated(auth.isAuthenticated);
+    setCurrentUser(auth.user);
+  }, [auth.isAuthenticated, auth.user]);
   
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  // Временно используем моковые данные вместо API
+  const [users] = useState(MOCK_USERS);
+  const [projects] = useState(MOCK_PROJECTS);
+  const [estimates] = useState(MOCK_ESTIMATES);
+  const [estimateItems] = useState(MOCK_ESTIMATE_ITEMS);
+  const [counterparties] = useState(MOCK_COUNTERPARTIES);
+  const [payments] = useState(MOCK_PAYMENTS);
+  const [events] = useState(MOCK_EVENTS);
+  const [supplyRequests] = useState(MOCK_SUPPLY_REQUESTS);
+  const [documents] = useState(MOCK_DOCUMENTS);
+  const [notifications] = useState(MOCK_NOTIFICATIONS);
+  const [acts] = useState(MOCK_ACTS);
+  const [priceListCategories] = useState(MOCK_PRICE_CATEGORIES);
+  const [priceListItems] = useState(MOCK_PRICE_ITEMS);
+  const [designFiles] = useState(MOCK_DESIGN_FILES);
+  const [specifications] = useState(MOCK_SPECIFICATIONS);
+  const [tasks] = useState(MOCK_TASKS);
+  const [chatMessages] = useState(MOCK_CHAT);
+  const [photoStream] = useState(MOCK_PHOTOSTREAM);
+  const [cashAccounts] = useState(MOCK_CASH_ACCOUNTS);
+  const [financialArticles] = useState(MOCK_FINANCIAL_ARTICLES);
+  const [transactions] = useState(MOCK_TRANSACTIONS);
+  const [leads] = useState(MOCK_LEADS);
+  const [templates] = useState(MOCK_TEMPLATES);
+  const [operationTemplates] = useState(MOCK_OPERATION_TEMPLATES);
+  const [operationTemplateItems] = useState(MOCK_OPERATION_TEMPLATE_ITEMS);
+  const [measurements] = useState(MOCK_MEASUREMENTS);
+  const [companySettings] = useState(MOCK_COMPANY_SETTINGS);
+  const [aiConfig] = useState(MOCK_AI_CONFIG);
+  
+  // Loading and error states
+  const [loading, setLoading] = useState({
+    projects: false,
+    users: false,
+    estimates: false,
+    counterparties: false,
+    payments: false,
+    global: false
+  });
+
+  const [errors, setErrors] = useState({
+    projects: null as string | null,
+    users: null as string | null,
+    estimates: null as string | null,
+    counterparties: null as string | null,
+    payments: null as string | null,
+    global: null as string | null
+  });
+
+  // Computed values
+  const isLoading = loading.global || loading.projects || loading.users || loading.estimates || loading.counterparties || loading.payments;
+  const hasError = !!(errors.global || errors.projects || errors.users || errors.estimates || errors.counterparties || errors.payments);
+
+  // Initialize data function (using mocks for now)
+  const initializeData = async () => {
+    setLoading(prev => ({ ...prev, global: true }));
+    setErrors(prev => ({ ...prev, global: null }));
+    
+    try {
+      // Since we're using mock data, we don't need to load anything
+      // But we simulate a small delay for consistency
+      await new Promise(resolve => setTimeout(resolve, 100));
+    } catch (error) {
+      setErrors(prev => ({ ...prev, global: error instanceof Error ? error.message : 'Unknown error' }));
+    } finally {
+      setLoading(prev => ({ ...prev, global: false }));
+    }
+  };
+
+  // Mock setters (no-op for now)
+  const setProjects = () => {};
+  const setUsers = () => {};
+  const setEstimates = () => {};
+  const setCounterparties = () => {};
+  const setEstimateItems = () => {};
+  const setPayments = () => {};
+  const setEvents = () => {};
+  const setSupplyRequests = () => {};
+  const setDocuments = () => {};
+  const setNotifications = () => {};
+  const setActs = () => {};
+  const setPriceListCategories = () => {};
+  const setPriceListItems = () => {};
+  const setDesignFiles = () => {};
+  const setSpecifications = () => {};
+  const setTasks = () => {};
+  const setChatMessages = () => {};
+  const setPhotoStream = () => {};
+  const setCashAccounts = () => {};
+  const setFinancialArticles = () => {};
+  const setTransactions = () => {};
+  const setLeads = () => {};
+  const setTemplates = () => {};
+  const setOperationTemplates = () => {};
+  const setOperationTemplateItems = () => {};
+  const setMeasurements = () => {};
+  const setCompanySettings = () => {};
+  const setAiConfig = () => {};
 
   // Auth Actions
+  // Устаревший метод - используется только для обратной совместимости
+  // Auth.tsx теперь использует useAuth() из apiClient напрямую
   const login = async (email: string, name?: string) => {
+    // Этот метод больше не используется в Auth.tsx
+    // Оставлен для обратной совместимости
+    console.warn('login(email, name) is deprecated. Use apiClient.login() or useAuth().login() instead.');
     if (name) {
-      // For demo purposes, create a temporary user
+      // Для обратной совместимости создаем временного пользователя
       const newUser: User = {
         id: uuidv4(),
         name: name,
@@ -225,16 +322,23 @@ const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
         is_active: true
       };
       setCurrentUser(newUser);
+      setIsAuthenticated(true);
     } else {
-      // Use first available user from API data
       const firstUser = users.length > 0 ? users[0] : null;
       setCurrentUser(firstUser);
+      setIsAuthenticated(true);
     }
-    setIsAuthenticated(true);
   };
 
-  const logout = () => {
-    setIsAuthenticated(false);
+  const logout = async () => {
+    try {
+      await apiClient.logout();
+    } catch (error) {
+      console.error('Logout error:', error);
+    } finally {
+      setIsAuthenticated(false);
+      setCurrentUser(null);
+    }
   };
 
   const addProject = (project: Project) => {
@@ -247,7 +351,7 @@ const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
   const updateUser = (updatedUser: User) => {
     setUsers(prev => prev.map(u => u.id === updatedUser.id ? updatedUser : u));
-    if (currentUser.id === updatedUser.id) {
+    if (currentUser && currentUser.id === updatedUser.id) {
         setCurrentUser(updatedUser);
     }
   };
@@ -314,7 +418,7 @@ const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     setActs(prev => [...prev, act]);
     sendNotification({
       title: 'Новый Акт выполненных работ',
-      message: `${act.number} создан пользователем ${currentUser.name}`,
+      message: `${act.number} создан пользователем ${currentUser?.name || 'неизвестным'}`,
       type: NotificationType.Info,
       target_role: UserRole.ProjectManager
     });
@@ -643,7 +747,7 @@ const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     } else if (notif.action_payload.type === 'approve_payment') {
         const transId = notif.action_payload.entity_id;
         if (approved) {
-           setTransactions(prev => prev.map(t => t.id === transId ? { ...t, status: TransactionStatus.Approved, approved_by: currentUser.id } : t));
+           setTransactions(prev => prev.map(t => t.id === transId ? { ...t, status: TransactionStatus.Approved, approved_by: currentUser?.id || '' } : t));
         } else {
            setTransactions(prev => prev.map(t => t.id === transId ? { ...t, status: TransactionStatus.Rejected } : t));
         }
@@ -731,7 +835,8 @@ const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
       addOperationTemplate, updateOperationTemplate, deleteOperationTemplate, addOperationTemplateItem, updateOperationTemplateItem, deleteOperationTemplateItem,
       addMeasurementProject, updateMeasurementProject,
       addItemToPriceList, addItemToOperationTemplate,
-      updateCompanySettings, updateAIConfig
+      updateCompanySettings, updateAIConfig,
+      initializeData
     }}>
       {children}
       {isAuthenticated && <AIAssistant />}
@@ -797,6 +902,8 @@ const AppRoutes = () => {
             <Route path="/blog" element={<Blog />} />
             <Route path="/blog/:id" element={<BlogPost />} />
             <Route path="/auth" element={<Auth />} />
+            <Route path="/login" element={<Auth />} />
+            <Route path="/register" element={<Auth />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </PublicLayout>
@@ -853,12 +960,14 @@ const ScrollToTop = () => {
 
 export const App: React.FC = () => {
   return (
-    <AppProvider>
-      <HashRouter>
-        <ScrollToTop />
-        <AppRoutes />
-      </HashRouter>
-    </AppProvider>
+    <AuthProvider>
+      <AppProvider>
+        <HashRouter>
+          <ScrollToTop />
+          <AppRoutes />
+        </HashRouter>
+      </AppProvider>
+    </AuthProvider>
   );
 };
 

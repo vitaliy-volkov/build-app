@@ -108,7 +108,8 @@ class ApiClient {
 
   private async request<T>(
     endpoint: string, 
-    options: RequestInit = {}
+    options: RequestInit = {},
+    retryOn401: boolean = true
   ): Promise<T> {
     const url = `${this.baseURL}${endpoint}`;
     
@@ -130,6 +131,24 @@ class ApiClient {
       const response = await fetch(url, config);
       const data = await response.json();
 
+      // Если получили 401 и это не запрос на refresh, пытаемся обновить токен
+      if (response.status === 401 && retryOn401 && endpoint !== '/auth/refresh') {
+        const refreshToken = localStorage.getItem('refresh_token');
+        if (refreshToken) {
+          try {
+            await this.refreshToken(refreshToken);
+            // Повторяем запрос с новым токеном
+            return this.request<T>(endpoint, options, false);
+          } catch (refreshError) {
+            // Если refresh не удался, очищаем токены и пробрасываем ошибку
+            this.token = null;
+            localStorage.removeItem('access_token');
+            localStorage.removeItem('refresh_token');
+            throw new Error('Session expired. Please login again.');
+          }
+        }
+      }
+
       if (!response.ok) {
         throw new Error(data.error || `HTTP ${response.status}`);
       }
@@ -148,9 +167,12 @@ class ApiClient {
       body: JSON.stringify({ email, password }),
     });
 
-    if (response.success && response.data?.tokens.access_token) {
+    if (response.success && response.data?.tokens) {
       this.token = response.data.tokens.access_token;
       localStorage.setItem('access_token', this.token);
+      if (response.data.tokens.refresh_token) {
+        localStorage.setItem('refresh_token', response.data.tokens.refresh_token);
+      }
     }
 
     return response;
@@ -162,9 +184,12 @@ class ApiClient {
       body: JSON.stringify(data),
     });
 
-    if (response.success && response.data?.tokens.access_token) {
+    if (response.success && response.data?.tokens) {
       this.token = response.data.tokens.access_token;
       localStorage.setItem('access_token', this.token);
+      if (response.data.tokens.refresh_token) {
+        localStorage.setItem('refresh_token', response.data.tokens.refresh_token);
+      }
     }
 
     return response;
@@ -187,10 +212,20 @@ class ApiClient {
   }
 
   async refreshToken(refreshToken: string): Promise<ApiResponse<{ access_token: string; refresh_token: string }>> {
-    return this.request<ApiResponse<{ access_token: string; refresh_token: string }>>('/auth/refresh', {
+    const response = await this.request<ApiResponse<{ access_token: string; refresh_token: string }>>('/auth/refresh', {
       method: 'POST',
       body: JSON.stringify({ refresh_token: refreshToken }),
     });
+
+    if (response.success && response.data) {
+      this.token = response.data.access_token;
+      localStorage.setItem('access_token', response.data.access_token);
+      if (response.data.refresh_token) {
+        localStorage.setItem('refresh_token', response.data.refresh_token);
+      }
+    }
+
+    return response;
   }
 
   // Projects
@@ -488,6 +523,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (response.success && response.data) {
         setUser(response.data.user);
         setToken(response.data.tokens.access_token);
+        if (response.data.tokens.refresh_token) {
+          localStorage.setItem('refresh_token', response.data.tokens.refresh_token);
+        }
         return true;
       }
       return false;
@@ -503,6 +541,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (response.success && response.data) {
         setUser(response.data.user);
         setToken(response.data.tokens.access_token);
+        if (response.data.tokens.refresh_token) {
+          localStorage.setItem('refresh_token', response.data.tokens.refresh_token);
+        }
         return true;
       }
       return false;

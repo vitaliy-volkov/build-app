@@ -4,10 +4,12 @@
 
 Port 3000 is in use, trying another one...
 Port 3001 is in use, trying another one...
+Port 3002 is in use, trying another one...
+Port 3003 is in use, trying another one...
 
-  VITE v6.4.1  ready in 125 ms
+  VITE v6.4.1  ready in 199 ms
 
-  ➜  Local:   http://localhost:3002/
-  ➜  Network: http://192.168.3.10:3002/
-  ➜  Network: http://240.0.0.2:3002/
+  ➜  Local:   http://localhost:3004/
+  ➜  Network: http://192.168.3.10:3004/
+  ➜  Network: http://240.0.0.2:3004/
   ➜  press h + enter to show help

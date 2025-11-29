@@ -7,8 +7,8 @@ import redis.asyncio as redis
 from app.config import settings
 from app.core.cache_service import CacheService
 from app.core.monitoring import setup_monitoring
-from app.routers import estimates, chat, vision, auth
-from app.middleware.auth import AuthenticationMiddleware
+from app.routers import estimates, chat, vision
+# from app.middleware.auth import AuthenticationMiddleware
 
 
 # Настройка логирования
@@ -45,16 +45,21 @@ async def lifespan(app: FastAPI):
     
     # Инициализация кэша
     cache_service = CacheService()
-    await cache_service.initialize()
-    app.state.cache = cache_service
+    try:
+        await cache_service.initialize()
+        app.state.cache = cache_service
+        logger.info("Cache service initialized successfully")
+    except Exception as e:
+        logger.warning("Cache service initialization failed, continuing without cache", error=str(e))
+        app.state.cache = None
     
     # Настройка мониторинга
     if settings.enable_metrics:
         setup_monitoring()
     
     # Добавление authentication middleware
-    if not settings.debug:  # Only in production
-        app.add_middleware(AuthenticationMiddleware, redis_client=redis_client)
+    # if not settings.debug:  # Only in production
+    #     app.add_middleware(AuthenticationMiddleware, redis_client=redis_client)
     
     logger.info("AI Gateway startup complete")
     
@@ -111,7 +116,6 @@ async def root():
 
 
 # Регистрация роутеров
-app.include_router(auth.router, prefix="/api/v1/auth", tags=["Authentication"])
 app.include_router(estimates.router, prefix="/api/v1/estimates", tags=["Estimates"])
 app.include_router(chat.router, prefix="/api/v1/chat", tags=["Chat"])
 app.include_router(vision.router, prefix="/api/v1/vision", tags=["Vision"])

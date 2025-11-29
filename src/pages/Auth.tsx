@@ -1,11 +1,38 @@
 
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { useApp } from '../App';
-import { LayoutDashboard, CheckCircle2, Loader2 } from 'lucide-react';
+import { apiClient, useAuth } from '../services/apiClient';
+import { LayoutDashboard, CheckCircle2, Loader2, AlertCircle } from 'lucide-react';
+import { UserRole } from '../types';
+
+// Валидация пароля на клиенте
+const validatePassword = (password: string): string | null => {
+  if (password.length < 8) {
+    return 'Пароль должен содержать минимум 8 символов';
+  }
+
+  let hasUpper = false;
+  let hasLower = false;
+  let hasDigit = false;
+  let hasSpecial = false;
+
+  for (const char of password) {
+    if (char >= 'A' && char <= 'Z') hasUpper = true;
+    else if (char >= 'a' && char <= 'z') hasLower = true;
+    else if (char >= '0' && char <= '9') hasDigit = true;
+    else if ('!@#$%^&*'.includes(char)) hasSpecial = true;
+  }
+
+  const typesCount = [hasUpper, hasLower, hasDigit, hasSpecial].filter(Boolean).length;
+  if (typesCount < 3) {
+    return 'Пароль должен содержать минимум 3 из 4 типов: заглавные, строчные, цифры, спецсимволы (!@#$%^&*)';
+  }
+
+  return null;
+};
 
 export const Auth = () => {
-  const { login } = useApp();
+  const { login, register } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const isRegister = location.pathname === '/register';
@@ -14,17 +41,67 @@ export const Auth = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
+    setPasswordError(null);
     setIsLoading(true);
-    
-    // Simulate API Call
-    setTimeout(() => {
+
+    try {
+      // Валидация email
+      if (!email || !email.includes('@')) {
+        setError('Введите корректный email');
+        setIsLoading(false);
+        return;
+      }
+
+      // Валидация пароля
+      const passwordValidation = validatePassword(password);
+      if (passwordValidation) {
+        setPasswordError(passwordValidation);
+        setIsLoading(false);
+        return;
+      }
+
+      if (isRegister) {
+        // Валидация имени
+        if (!name || name.length < 2) {
+          setError('Имя должно содержать минимум 2 символа');
+          setIsLoading(false);
+          return;
+        }
+
+        // Регистрация
+        const success = await register({
+          email,
+          password,
+          name,
+          role: UserRole.Director, // По умолчанию директор
+        });
+
+        if (success) {
+          navigate('/');
+        } else {
+          setError('Ошибка регистрации. Проверьте данные и попробуйте снова.');
+        }
+      } else {
+        // Логин
+        const success = await login(email, password);
+        if (success) {
+          navigate('/');
+        } else {
+          setError('Неверный email или пароль');
+        }
+      }
+    } catch (err: any) {
+      console.error('Auth error:', err);
+      setError(err.message || 'Произошла ошибка. Попробуйте снова.');
+    } finally {
       setIsLoading(false);
-      login(email, isRegister ? name : undefined); // In real app, validate credentials
-      navigate('/');
-    }, 1000);
+    }
   };
 
   return (
@@ -74,12 +151,30 @@ export const Auth = () => {
              <input 
                type="password" 
                required 
-               className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+               className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all ${
+                 passwordError ? 'border-red-300' : 'border-slate-300'
+               }`}
                placeholder="••••••••"
                value={password}
-               onChange={e => setPassword(e.target.value)}
+               onChange={e => {
+                 setPassword(e.target.value);
+                 if (passwordError) {
+                   const validation = validatePassword(e.target.value);
+                   setPasswordError(validation);
+                 }
+               }}
              />
+             {passwordError && (
+               <p className="mt-1 text-xs text-red-600">{passwordError}</p>
+             )}
            </div>
+
+           {error && (
+             <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+               <AlertCircle size={16} />
+               <span>{error}</span>
+             </div>
+           )}
 
            <button 
              type="submit" 

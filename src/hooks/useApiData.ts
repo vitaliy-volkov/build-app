@@ -291,6 +291,7 @@ export const useApiData = () => {
     setOperationTemplateItems,
     setMeasurements,
     setCompanySettings,
-    setAiConfig
+    setAiConfig,
+    initializeData
   };
 };
