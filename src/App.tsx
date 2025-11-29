@@ -116,7 +116,7 @@ interface AppState {
   setCurrentUser: (user: User) => void;
   updateUser: (user: User) => void; 
   addUser: (user: User) => void; // NEW: Add user action
-  addProject: (project: Project) => void; 
+  addProject: (project: Project) => Promise<void>; 
   updateProject: (project: Project) => void;
   addPayment: (payment: Payment) => void;
   updateEstimateItem: (item: EstimateItem) => void;
@@ -206,13 +206,13 @@ const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     setCurrentUser(auth.user);
   }, [auth.isAuthenticated, auth.user]);
   
-  // Временно используем моковые данные вместо API
-  const [users] = useState(MOCK_USERS);
-  const [projects] = useState(MOCK_PROJECTS);
-  const [estimates] = useState(MOCK_ESTIMATES);
-  const [estimateItems] = useState(MOCK_ESTIMATE_ITEMS);
-  const [counterparties] = useState(MOCK_COUNTERPARTIES);
-  const [payments] = useState(MOCK_PAYMENTS);
+  // State for data
+  const [users, setUsersState] = useState<User[]>(MOCK_USERS);
+  const [projects, setProjectsState] = useState<Project[]>([]);
+  const [estimates, setEstimatesState] = useState<Estimate[]>(MOCK_ESTIMATES);
+  const [estimateItems, setEstimateItemsState] = useState<EstimateItem[]>(MOCK_ESTIMATE_ITEMS);
+  const [counterparties, setCounterpartiesState] = useState<Counterparty[]>([]);
+  const [payments, setPaymentsState] = useState<Payment[]>(MOCK_PAYMENTS);
   const [events] = useState(MOCK_EVENTS);
   const [supplyRequests] = useState(MOCK_SUPPLY_REQUESTS);
   const [documents] = useState(MOCK_DOCUMENTS);
@@ -259,27 +259,49 @@ const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const isLoading = loading.global || loading.projects || loading.users || loading.estimates || loading.counterparties || loading.payments;
   const hasError = !!(errors.global || errors.projects || errors.users || errors.estimates || errors.counterparties || errors.payments);
 
-  // Initialize data function (using mocks for now)
+  // Initialize data function
   const initializeData = async () => {
     setLoading(prev => ({ ...prev, global: true }));
     setErrors(prev => ({ ...prev, global: null }));
     
     try {
-      // Since we're using mock data, we don't need to load anything
-      // But we simulate a small delay for consistency
-      await new Promise(resolve => setTimeout(resolve, 100));
+      if (!isAuthenticated) return;
+
+      const [projectsRes, counterpartiesRes] = await Promise.all([
+        apiClient.getProjects({ limit: 1000 }),
+        apiClient.getCounterparties({ limit: 1000 })
+      ]);
+
+      if (projectsRes.success && projectsRes.data) {
+        setProjectsState(projectsRes.data.data);
+      } else {
+        throw new Error(projectsRes.error || 'Failed to load projects');
+      }
+
+      if (counterpartiesRes.success && counterpartiesRes.data) {
+        setCounterpartiesState(counterpartiesRes.data.data);
+      } else {
+        throw new Error(counterpartiesRes.error || 'Failed to load counterparties');
+      }
+      
     } catch (error) {
+      console.error('Failed to initialize data:', error);
       setErrors(prev => ({ ...prev, global: error instanceof Error ? error.message : 'Unknown error' }));
     } finally {
       setLoading(prev => ({ ...prev, global: false }));
     }
   };
 
+  useEffect(() => {
+    if (isAuthenticated) {
+        initializeData();
+    }
+  }, [isAuthenticated]);
+
+
   // Mock setters (no-op for now)
-  const setProjects = () => {};
   const setUsers = () => {};
   const setEstimates = () => {};
-  const setCounterparties = () => {};
   const setEstimateItems = () => {};
   const setPayments = () => {};
   const setEvents = () => {};
@@ -342,12 +364,45 @@ const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     }
   };
 
-  const addProject = (project: Project) => {
-    setProjects(prev => [...prev, project]);
+  const addProject = async (project: Project) => {
+    try {
+      setLoading(prev => ({ ...prev, projects: true }));
+      // Omit ID so backend generates it? Or keep it?
+      // Since frontend generates UUID, we can send it.
+      const response = await apiClient.createProject(project);
+      
+      if (response.success && response.data) {
+        setProjectsState(prev => [...prev, response.data!.project]);
+      } else {
+        throw new Error(response.error || 'Failed to create project');
+      }
+    } catch (error) {
+       console.error('Failed to create project:', error);
+       setErrors(prev => ({ ...prev, projects: error instanceof Error ? error.message : String(error) }));
+       throw error;
+    } finally {
+      setLoading(prev => ({ ...prev, projects: false }));
+    }
   };
 
-  const updateProject = (updatedProject: Project) => {
-    setProjects(prev => prev.map(p => p.id === updatedProject.id ? updatedProject : p));
+  const updateProject = async (updatedProject: Project) => {
+    try {
+        setLoading(prev => ({ ...prev, projects: true }));
+        const response = await apiClient.updateProject(updatedProject.id, updatedProject);
+        
+        if (response.success && response.data) {
+           const savedProject = response.data.project;
+           setProjectsState(prev => prev.map(p => p.id === savedProject.id ? savedProject : p));
+        } else {
+           throw new Error(response.error || 'Failed to update project');
+        }
+    } catch (error) {
+        console.error('Failed to update project:', error);
+        setErrors(prev => ({ ...prev, projects: error instanceof Error ? error.message : String(error) }));
+        // Optimistic update rollback could be here
+    } finally {
+        setLoading(prev => ({ ...prev, projects: false }));
+    }
   };
 
   const updateUser = (updatedUser: User) => {
@@ -606,7 +661,7 @@ const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
           status: ProjectStatus.Planning,
           team: []
       };
-      setProjects(prev => [...prev, newProject]);
+      addProject(newProject);
 
       updateLead({ ...lead, status: LeadStatus.Success });
 
@@ -699,7 +754,7 @@ const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
         }]);
     });
 
-    setProjects(prev => [...prev, newProject]);
+    addProject(newProject);
     sendNotification({ title: 'Проект создан', message: `Проект "${newProject.name}" создан из шаблона.`, type: NotificationType.Success });
   };
 
