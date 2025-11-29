@@ -233,8 +233,8 @@ const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [operationTemplates] = useState(MOCK_OPERATION_TEMPLATES);
   const [operationTemplateItems] = useState(MOCK_OPERATION_TEMPLATE_ITEMS);
   const [measurements] = useState(MOCK_MEASUREMENTS);
-  const [companySettings] = useState(MOCK_COMPANY_SETTINGS);
-  const [aiConfig] = useState(MOCK_AI_CONFIG);
+  const [companySettings, setCompanySettings] = useState<CompanySettings>(MOCK_COMPANY_SETTINGS);
+  const [aiConfig, setAiConfig] = useState(MOCK_AI_CONFIG);
   
   // Loading and error states
   const [loading, setLoading] = useState({
@@ -298,6 +298,42 @@ const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     }
   }, [isAuthenticated]);
 
+  // Sync Company Settings and Users from Current User
+  useEffect(() => {
+    if (isAuthenticated && currentUser) {
+        // 1. Sync Company Settings
+        if (currentUser.company) {
+             const c = currentUser.company;
+             setCompanySettings(prev => ({
+                 ...prev,
+                 id: c.id,
+                 name: c.name,
+                 address: c.address,
+                 taxId: c.inn || prev.taxId,
+                 email: c.email || prev.email,
+                 phone: c.phone || prev.phone,
+                 website: c.website || prev.website,
+                 bankDetails: prev.bankDetails, // Not in Company model yet
+             }));
+        }
+
+        // 2. Sync Users List (At least put current user there)
+        // Check if current user is in the list
+        setUsersState(prev => {
+            const exists = prev.some(u => u.id === currentUser.id);
+            if (!exists) {
+                // If we are strictly using real data, we might want to replace MOCKs.
+                // But to be safe, let's append.
+                // HOWEVER, if the user sees "mock data used", maybe we should replace if the list contains ONLY mocks?
+                // MOCK_USERS come from mockData. 
+                // Let's just append for now to be safe against breaking other things.
+                return [...prev, currentUser];
+            }
+            return prev.map(u => u.id === currentUser.id ? currentUser : u);
+        });
+    }
+  }, [isAuthenticated, currentUser]);
+
 
   // Mock setters (no-op for now)
   const setUsers = () => {};
@@ -324,8 +360,7 @@ const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const setOperationTemplates = () => {};
   const setOperationTemplateItems = () => {};
   const setMeasurements = () => {};
-  const setCompanySettings = () => {};
-  const setAiConfig = () => {};
+
 
   // Auth Actions
   // Устаревший метод - используется только для обратной совместимости
@@ -405,12 +440,47 @@ const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     }
   };
 
-  const updateUser = (updatedUser: User) => {
-    setUsers(prev => prev.map(u => u.id === updatedUser.id ? updatedUser : u));
-    if (currentUser && currentUser.id === updatedUser.id) {
-        setCurrentUser(updatedUser);
+  const updateUser = async (updatedUser: User) => {
+    try {
+        // If updating current user, call API
+        if (currentUser && currentUser.id === updatedUser.id) {
+             const res = await apiClient.updateProfile({
+                 name: updatedUser.name,
+                 email: updatedUser.email,
+                 phone: updatedUser.phone,
+             });
+             if (res.success && res.data?.user) {
+                 updatedUser = { ...updatedUser, ...res.data.user };
+             }
+        }
+        
+        setUsersState(prev => prev.map(u => u.id === updatedUser.id ? updatedUser : u));
+        if (currentUser && currentUser.id === updatedUser.id) {
+            setCurrentUser(updatedUser);
+        }
+    } catch (e) {
+        console.error("Failed to update user", e);
     }
   };
+
+  const updateCompanySettings = async (settings: CompanySettings) => {
+      try {
+          if (currentUser?.company_id) {
+               await apiClient.updateCompany(currentUser.company_id, {
+                   name: settings.name,
+                   address: settings.address,
+                   inn: settings.taxId,
+                   email: settings.email,
+                   phone: settings.phone,
+                   website: settings.website,
+               });
+          }
+          setCompanySettings(settings);
+      } catch (e) {
+          console.error("Failed to update company", e);
+      }
+  };
+
 
   const addUser = (user: User) => {
     setUsers(prev => [...prev, user]);
@@ -868,7 +938,6 @@ const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   };
 
   // --- Settings Actions ---
-  const updateCompanySettings = (settings: CompanySettings) => setCompanySettings(settings);
   const updateAIConfig = (config: AIConfiguration) => setAiConfig(config);
 
   return (

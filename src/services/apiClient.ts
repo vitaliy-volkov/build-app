@@ -200,6 +200,13 @@ class ApiClient {
     return this.request<ApiResponse<{ user: User }>>('/auth/me');
   }
 
+  async updateProfile(data: Partial<User>): Promise<ApiResponse<{ user: User }>> {
+    return this.request<ApiResponse<{ user: User }>>('/auth/me', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
   async logout(): Promise<void> {
     try {
       await this.request('/auth/logout', { method: 'POST' });
