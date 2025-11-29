@@ -1,184 +1,184 @@
 package main
 
 import (
-	"context"
-	"fmt"
-	"log"
-	"net/http"
-	"os"
-	"os/signal"
-	"syscall"
-	"time"
+    "context"
+    "fmt"
+    "log"
+    "net/http"
+    "os"
+    "os/signal"
+    "syscall"
+    "time"
 
-	"stroy-control-backend/docs"
-	"stroy-control-backend/internal/ai"
-	"stroy-control-backend/internal/auth"
-	"stroy-control-backend/internal/company"
-	"stroy-control-backend/internal/config"
-	"stroy-control-backend/internal/email"
-	"stroy-control-backend/internal/finance"
-	"stroy-control-backend/internal/middleware"
-	"stroy-control-backend/internal/project"
-	"stroy-control-backend/internal/redis"
-	"stroy-control-backend/internal/services"
+    "stroy-control-backend/docs"
+    "stroy-control-backend/internal/ai"
+    "stroy-control-backend/internal/auth"
+    "stroy-control-backend/internal/company"
+    "stroy-control-backend/internal/config"
+    "stroy-control-backend/internal/email"
+    "stroy-control-backend/internal/finance"
+    "stroy-control-backend/internal/middleware"
+    "stroy-control-backend/internal/project"
+    "stroy-control-backend/internal/redis"
+    "stroy-control-backend/internal/services"
 
-	"github.com/gin-gonic/gin"
+    "github.com/gin-gonic/gin"
 )
 
 func main() {
-	// Load Configuration
-	cfg, err := config.Load()
-	if err != nil {
-		log.Fatalf("Failed to load config: %v", err)
-	}
+    // Load Configuration
+    cfg, err := config.Load()
+    if err != nil {
+        log.Fatalf("Failed to load config: %v", err)
+    }
 
-	// Initialize Database Connection
-	db, err := config.ConnectDatabase(cfg)
-	if err != nil {
-		log.Fatalf("Failed to connect to database: %v", err)
-	}
-	defer db.Close()
+    // Initialize Database Connection
+    db, err := config.ConnectDatabase(cfg)
+    if err != nil {
+        log.Fatalf("Failed to connect to database: %v", err)
+    }
+    defer db.Close()
 
-	// Initialize Redis Service
-	redisService := redis.NewRedisService(cfg)
-	defer redisService.Close()
+    // Initialize Redis Service
+    redisService := redis.NewRedisService(cfg)
+    defer redisService.Close()
 
-	// Test Redis connection
-	if err := redisService.HealthCheck(); err != nil {
-		log.Printf("Warning: Redis connection failed: %v", err)
-	} else {
-		log.Println("Redis connection established")
-	}
+    // Test Redis connection
+    if err := redisService.HealthCheck(); err != nil {
+        log.Printf("Warning: Redis connection failed: %v", err)
+    } else {
+        log.Println("Redis connection established")
+    }
 
-	// Initialize JWT Service
-	jwtService := auth.NewJWTService(cfg)
+    // Initialize JWT Service
+    jwtService := auth.NewJWTService(cfg)
 
-	// Initialize Email Service
-	emailService := email.NewEmailService(cfg.Email)
+    // Initialize Email Service
+    emailService := email.NewEmailService(cfg.Email)
 
-	// Initialize Authentication Router
-	authRouter := auth.NewRouterGroup(db.GetDB(), jwtService, emailService)
+    // Initialize Authentication Router
+    authRouter := auth.NewRouterGroup(db.GetDB(), jwtService, emailService)
 
-	// Initialize Project Router
-	projectRouter := project.NewRouterGroup(db.GetDB(), authRouter.GetMiddleware())
+    // Initialize Project Router
+    projectRouter := project.NewRouterGroup(db.GetDB(), authRouter.GetMiddleware())
 
-	// Initialize Company Router
-	companyRouter := company.NewRouterGroup(db.GetDB(), authRouter.GetMiddleware())
+    // Initialize Company Router
+    companyRouter := company.NewRouterGroup(db.GetDB(), authRouter.GetMiddleware())
 
-	// Initialize AI Service
-	aiService := services.NewAIService(
-		cfg.AI.GatewayURL,
-		cfg.AI.APIKey,
-		redisService.GetClient(),
-	)
+    // Initialize AI Service
+    aiService := services.NewAIService(
+        cfg.AI.GatewayURL,
+        cfg.AI.APIKey,
+        redisService.GetClient(),
+    )
 
-	// Initialize AI Router
-	aiRouter := ai.NewRouterGroup(aiService, authRouter.GetMiddleware().Protected())
+    // Initialize AI Router
+    aiRouter := ai.NewRouterGroup(aiService, authRouter.GetMiddleware().Protected())
 
-	// Set up Gin router with middleware
-	r := gin.Default()
+    // Set up Gin router with middleware
+    r := gin.Default()
 
-	// Initialize rate limiting middleware
-	rateLimitMiddleware := middleware.NewRateLimitMiddleware(redisService)
+    // Initialize rate limiting middleware
+    rateLimitMiddleware := middleware.NewRateLimitMiddleware(redisService)
 
-	// Add global middleware
-	r.Use(middleware.RequestIDMiddleware())
-	r.Use(middleware.LoggingMiddleware())
-	r.Use(middleware.ErrorHandlingMiddleware())
-	r.Use(middleware.SecurityHeadersMiddleware())
-	r.Use(middleware.CORSMiddleware())
+    // Add global middleware
+    r.Use(middleware.RequestIDMiddleware())
+    r.Use(middleware.LoggingMiddleware())
+    r.Use(middleware.ErrorHandlingMiddleware())
+    r.Use(middleware.SecurityHeadersMiddleware())
+    r.Use(middleware.CORSMiddleware(cfg.CORS.AllowedOrigins))
 
-	// Add rate limiting middleware
-	r.Use(rateLimitMiddleware.RateLimitByIP())
+    // Add rate limiting middleware
+    r.Use(rateLimitMiddleware.RateLimitByIP())
 
-	// Add token blacklist middleware for protected routes
-	r.Use(rateLimitMiddleware.TokenBlacklistMiddleware())
+    // Add token blacklist middleware for protected routes
+    r.Use(rateLimitMiddleware.TokenBlacklistMiddleware())
 
-	// Register authentication routes
-	authRouter.RegisterRoutes(r)
+    // Register authentication routes
+    authRouter.RegisterRoutes(r)
 
-	// Register project routes
-	projectRouter.RegisterRoutes(r)
+    // Register project routes
+    projectRouter.RegisterRoutes(r)
 
-	// Register company routes
-	companyRouter.RegisterRoutes(r)
+    // Register company routes
+    companyRouter.RegisterRoutes(r)
 
-	// Register finance routes
-	finance.RegisterRoutes(r.Group("/api/v1"), db.GetDB(), authRouter.GetMiddleware())
+    // Register finance routes
+    finance.RegisterRoutes(r.Group("/api/v1"), db.GetDB(), authRouter.GetMiddleware())
 
-	// Register AI routes
-	aiRouter.RegisterRoutes(r)
+    // Register AI routes
+    aiRouter.RegisterRoutes(r)
 
-	// Initialize Swagger documentation
-	docs.InitSwagger(r)
+    // Initialize Swagger documentation
+    docs.InitSwagger(r)
 
-	// Health Check with Database
-	r.GET("/health", func(c *gin.Context) {
-		// Check database connection
-		if err := db.HealthCheck(); err != nil {
-			c.JSON(http.StatusServiceUnavailable, gin.H{
-				"status":  "error",
-				"message": "Database connection failed",
-				"time":    time.Now(),
-			})
-			return
-		}
+    // Health Check with Database
+    r.GET("/health", func(c *gin.Context) {
+        // Check database connection
+        if err := db.HealthCheck(); err != nil {
+            c.JSON(http.StatusServiceUnavailable, gin.H{
+                "status":  "error",
+                "message": "Database connection failed",
+                "time":    time.Now(),
+            })
+            return
+        }
 
-		c.JSON(http.StatusOK, gin.H{
-			"status":    "ok",
-			"database":  "connected",
-			"timestamp": time.Now(),
-			"service":   "stroy-control-backend",
-		})
-	})
+        c.JSON(http.StatusOK, gin.H{
+            "status":    "ok",
+            "database":  "connected",
+            "timestamp": time.Now(),
+            "service":   "stroy-control-backend",
+        })
+    })
 
-	// Database info endpoint
-	r.GET("/api/v1/health/database", func(c *gin.Context) {
-		if err := db.HealthCheck(); err != nil {
-			c.JSON(http.StatusServiceUnavailable, gin.H{
-				"status":  "error",
-				"message": err.Error(),
-				"time":    time.Now(),
-			})
-			return
-		}
+    // Database info endpoint
+    r.GET("/api/v1/health/database", func(c *gin.Context) {
+        if err := db.HealthCheck(); err != nil {
+            c.JSON(http.StatusServiceUnavailable, gin.H{
+                "status":  "error",
+                "message": err.Error(),
+                "time":    time.Now(),
+            })
+            return
+        }
 
-		c.JSON(http.StatusOK, gin.H{
-			"status": "healthy",
-			"time":   time.Now(),
-		})
-	})
+        c.JSON(http.StatusOK, gin.H{
+            "status": "healthy",
+            "time":   time.Now(),
+        })
+    })
 
-	// Setup Server
-	server := &http.Server{
-		Addr:         fmt.Sprintf(":%d", cfg.Server.Port),
-		Handler:      r,
-		ReadTimeout:  cfg.Server.ReadTimeout,
-		WriteTimeout: cfg.Server.WriteTimeout,
-	}
+    // Setup Server
+    server := &http.Server{
+        Addr:         fmt.Sprintf(":%d", cfg.Server.Port),
+        Handler:      r,
+        ReadTimeout:  cfg.Server.ReadTimeout,
+        WriteTimeout: cfg.Server.WriteTimeout,
+    }
 
-	// Start server in goroutine
-	go func() {
-		log.Printf("Server starting on port %d", cfg.Server.Port)
-		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatalf("Failed to start server: %v", err)
-		}
-	}()
+    // Start server in goroutine
+    go func() {
+        log.Printf("Server starting on port %d", cfg.Server.Port)
+        if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+            log.Fatalf("Failed to start server: %v", err)
+        }
+    }()
 
-	// Wait for interrupt signal for graceful shutdown
-	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
-	<-quit
+    // Wait for interrupt signal for graceful shutdown
+    quit := make(chan os.Signal, 1)
+    signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+    <-quit
 
-	log.Println("Shutting down server...")
+    log.Println("Shutting down server...")
 
-	// Graceful shutdown with timeout
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
+    // Graceful shutdown with timeout
+    ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+    defer cancel()
 
-	if err := server.Shutdown(ctx); err != nil {
-		log.Fatalf("Server forced to shutdown: %v", err)
-	}
+    if err := server.Shutdown(ctx); err != nil {
+        log.Fatalf("Server forced to shutdown: %v", err)
+    }
 
-	log.Println("Server exited")
+    log.Println("Server exited")
 }
