@@ -86,7 +86,19 @@ func main() {
     r.Use(middleware.LoggingMiddleware())
     r.Use(middleware.ErrorHandlingMiddleware())
     r.Use(middleware.SecurityHeadersMiddleware())
-    r.Use(middleware.CORSMiddleware(cfg.CORS.AllowedOrigins))
+
+    // Configure CORS based on environment
+    allowedOrigins := cfg.CORS.AllowedOrigins
+    if os.Getenv("APP_ENV") != "development" {
+        filteredOrigins := make([]string, 0)
+        for _, origin := range allowedOrigins {
+            if origin != "*" {
+                filteredOrigins = append(filteredOrigins, origin)
+            }
+        }
+        allowedOrigins = filteredOrigins
+    }
+    r.Use(middleware.CORSMiddleware(allowedOrigins))
 
     // Add rate limiting middleware
     r.Use(rateLimitMiddleware.RateLimitByIP())

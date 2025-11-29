@@ -2,6 +2,9 @@ package config
 
 import (
     "fmt"
+    "net/url"
+    "os"
+    "strconv"
     "strings"
     "time"
 
@@ -123,6 +126,57 @@ func Load() (*Config, error) {
     var config Config
     if err := viper.Unmarshal(&config); err != nil {
         return nil, fmt.Errorf("failed to unmarshal config: %w", err)
+    }
+
+    // Override with Railway env vars
+    if portStr := os.Getenv("PORT"); portStr != "" {
+        if port, err := strconv.Atoi(portStr); err == nil {
+            config.Server.Port = port
+        }
+    }
+
+    if dbURL := os.Getenv("DATABASE_URL"); dbURL != "" {
+        if u, err := url.Parse(dbURL); err == nil {
+            config.Database.Host = u.Hostname()
+            if port := u.Port(); port != "" {
+                if p, err := strconv.Atoi(port); err == nil {
+                    config.Database.Port = p
+                }
+            }
+            config.Database.User = u.User.Username()
+            if password, ok := u.User.Password(); ok {
+                config.Database.Password = password
+            }
+            config.Database.DBName = strings.TrimPrefix(u.Path, "/")
+            config.Database.SSLMode = "require"
+        }
+    }
+
+    if redisURL := os.Getenv("REDIS_URL"); redisURL != "" {
+        if u, err := url.Parse(redisURL); err == nil {
+            config.Redis.Host = u.Hostname()
+            if port := u.Port(); port != "" {
+                if p, err := strconv.Atoi(port); err == nil {
+                    config.Redis.Port = p
+                }
+            }
+            if password, ok := u.User.Password(); ok {
+                config.Redis.Password = password
+            }
+            if len(u.Path) > 1 {
+                if db, err := strconv.Atoi(strings.TrimPrefix(u.Path, "/")); err == nil {
+                    config.Redis.DB = db
+                }
+            }
+        }
+    }
+
+    if corsOrigins := os.Getenv("CORS_ALLOWED_ORIGINS"); corsOrigins != "" {
+        origins := strings.Split(corsOrigins, ",")
+        for i, o := range origins {
+            origins[i] = strings.TrimSpace(o)
+        }
+        config.CORS.AllowedOrigins = origins
     }
 
     return &config, nil

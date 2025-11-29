@@ -4,8 +4,8 @@ services:
   # Основное приложение Backend (Go) - Production Ready
   backend:
     build:
-      context: .
-      dockerfile: Dockerfile
+      context: ..
+      dockerfile: backend/Dockerfile
     container_name: stroy-control-backend
     restart: unless-stopped
     env_file:
