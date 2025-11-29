@@ -13,6 +13,16 @@ type Config struct {
 	JWT      JWTConfig      `mapstructure:"jwt"`
 	Redis    RedisConfig    `mapstructure:"redis"`
 	AI       AIConfig       `mapstructure:"ai"`
+	Email    EmailConfig    `mapstructure:"email"`
+}
+
+type EmailConfig struct {
+	SMTPHost     string `mapstructure:"smtp_host"`
+	SMTPPort     int    `mapstructure:"smtp_port"`
+	SMTPUsername string `mapstructure:"smtp_username"`
+	SMTPPassword string `mapstructure:"smtp_password"`
+	FromAddress  string `mapstructure:"from_address"`
+	FromName     string `mapstructure:"from_name"`
 }
 
 type ServerConfig struct {
@@ -82,6 +92,14 @@ func Load() (*Config, error) {
 	// AI defaults
 	viper.SetDefault("ai.gateway_url", "https://api.openai.com/v1")
 	viper.SetDefault("ai.api_key", "")
+
+	// Email defaults
+	viper.SetDefault("email.smtp_host", "smtp.gmail.com")
+	viper.SetDefault("email.smtp_port", 587)
+	viper.SetDefault("email.smtp_username", "")
+	viper.SetDefault("email.smtp_password", "")
+	viper.SetDefault("email.from_address", "noreply@stroy-control.ru")
+	viper.SetDefault("email.from_name", "Строй-Контроль")
 
 	viper.AutomaticEnv()
 

@@ -7,7 +7,7 @@ import {
 } from '../types';
 
 // API Base Configuration
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8080/api/v1';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api/v1';
 
 // Types for API responses
 interface ApiResponse<T> {
@@ -55,6 +55,7 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<boolean>;
   register: (data: RegisterRequest) => Promise<boolean>;
   logout: () => void;
+  updateUser: (user: User) => void;
   isAuthenticated: boolean;
 }
 
@@ -559,6 +560,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setToken(null);
   };
 
+  const updateUser = (updatedUser: User) => {
+    setUser(prev => ({ ...prev, ...updatedUser }));
+  };
+
   const value: AuthContextType = {
     user,
     token,
@@ -566,6 +571,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     login,
     register,
     logout,
+    updateUser, // Expose this
     isAuthenticated: !!user,
   };
 

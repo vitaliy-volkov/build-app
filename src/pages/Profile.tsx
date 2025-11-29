@@ -44,18 +44,16 @@ export const Profile = () => {
   
   const { score, tier } = calculatePriority(currentUser);
 
-  // Mock switch company
+  // Mock switch company - for now just UI
   const handleSwitchCompany = (companyId: string) => {
-      if (!currentUser.companies) return;
-      const updated = currentUser.companies.map(c => ({ ...c, is_current: c.id === companyId }));
-      const targetComp = updated.find(c => c.id === companyId);
-      if(targetComp) {
-          updateUser({ ...currentUser, companies: updated, role: targetComp.role });
-          alert(`Вы переключились на ${targetComp.name}`);
-      }
+      alert(`Переключение компаний пока недоступно в этой версии.`);
   };
 
-  const currentCompany = currentUser.companies?.find(c => c.is_current);
+  // Use the direct company link from backend, or fallback to mock companies if present
+  const currentCompany = currentUser.company || (currentUser.companies?.find(c => c.is_current)) || { name: 'Не определено', id: 'unknown', role: currentUser.role };
+
+  // Mock companies list if only single company exists
+  const companiesList = currentUser.companies || (currentUser.company ? [{ ...currentUser.company, is_current: true, role: currentUser.role }] : []);
 
   // Prepare Chart Data
   const chartData = useMemo(() => {
@@ -103,19 +101,19 @@ export const Profile = () => {
                  <div className="relative group">
                      <button className="flex items-center space-x-2 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-lg px-4 py-2 transition-colors">
                          <Building2 size={18} className="text-slate-500"/>
-                         <span className="font-medium text-slate-700">{currentCompany?.name || 'Не выбрано'}</span>
+                         <span className="font-medium text-slate-700">{currentCompany?.name}</span>
                          <ChevronDown size={16} className="text-slate-400"/>
                      </button>
-                     {currentUser.companies && currentUser.companies.length > 1 && (
+                     {companiesList.length > 0 && (
                          <div className="absolute right-0 top-full mt-2 w-64 bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden z-50 hidden group-hover:block animate-in fade-in slide-in-from-top-2">
-                             {currentUser.companies.map(c => (
+                             {companiesList.map((c: any) => (
                                  <button 
                                     key={c.id} 
                                     onClick={() => handleSwitchCompany(c.id)}
-                                    className={`w-full text-left px-4 py-3 text-sm hover:bg-blue-50 flex items-center justify-between ${c.is_current ? 'bg-blue-50/50 font-bold text-blue-700' : 'text-slate-600'}`}
+                                    className={`w-full text-left px-4 py-3 text-sm hover:bg-blue-50 flex items-center justify-between ${c.id === currentCompany.id ? 'bg-blue-50/50 font-bold text-blue-700' : 'text-slate-600'}`}
                                  >
                                      <span>{c.name}</span>
-                                     {c.is_current && <div className="w-2 h-2 bg-blue-600 rounded-full"></div>}
+                                     {c.id === currentCompany.id && <div className="w-2 h-2 bg-blue-600 rounded-full"></div>}
                                  </button>
                              ))}
                              <div className="border-t border-slate-100 p-2">

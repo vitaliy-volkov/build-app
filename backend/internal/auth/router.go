@@ -1,41 +1,43 @@
 package auth
 
 import (
+	"stroy-control-backend/internal/email"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 )
 
-// RouterGroup группа роутов для аутентификации
+// RouterGroup структура для группировки роутов
 type RouterGroup struct {
-	authHandler *AuthHandler
-	middleware  *AuthMiddleware
+	handler    *AuthHandler
+	middleware *AuthMiddleware
 }
 
-// NewRouterGroup создает новую группу роутов аутентификации
-func NewRouterGroup(db *gorm.DB, jwtService *JWTService) *RouterGroup {
+// NewRouterGroup создает новую группу роутов
+func NewRouterGroup(db *gorm.DB, jwtService *JWTService, emailService *email.EmailService) *RouterGroup {
 	return &RouterGroup{
-		authHandler: NewAuthHandler(db, jwtService),
-		middleware:  NewAuthMiddleware(jwtService),
+		handler:    NewAuthHandler(db, jwtService, emailService),
+		middleware: NewAuthMiddleware(jwtService),
 	}
 }
 
 // RegisterRoutes регистрирует роуты аутентификации
 func (rg *RouterGroup) RegisterRoutes(r *gin.Engine) {
-	// Группа роутов для аутентификации
-	authGroup := r.Group("/api/v1/auth")
+	// Authentication routes
+	authGroup := r.Group("/auth")
 	{
-		// Публичные роуты (не требуют аутентификации)
-		authGroup.POST("/login", rg.authHandler.Login)
-		authGroup.POST("/register", rg.authHandler.Register)
-		authGroup.POST("/refresh", rg.authHandler.RefreshToken)
-
-		// Защищенные роуты (требуют аутентификации)
-		protected := authGroup.Group("/")
+		authGroup.POST("/register", rg.handler.Register)
+		authGroup.POST("/login", rg.handler.Login)
+		authGroup.POST("/refresh", rg.handler.RefreshToken)
+		authGroup.POST("/forgot-password", rg.handler.RequestPasswordReset)
+		authGroup.POST("/reset-password", rg.handler.ConfirmPasswordReset)
+		
+		// Protected routes
+		protected := authGroup.Group("")
 		protected.Use(rg.middleware.Protected())
 		{
-			protected.GET("/me", rg.authHandler.Me)
-			protected.POST("/logout", rg.authHandler.Logout)
-			protected.PUT("/change-password", rg.authHandler.ChangePassword)
+			protected.POST("/logout", rg.handler.Logout)
+			protected.GET("/me", rg.handler.Me)
+			protected.POST("/change-password", rg.handler.ChangePassword)
 		}
 	}
 }

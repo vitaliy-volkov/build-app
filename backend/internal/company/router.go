@@ -29,7 +29,11 @@ func (rg *RouterGroup) RegisterRoutes(r *gin.Engine) {
 	{
 		// CRUD операции с компаниями
 		companyGroup.GET("", rg.companyHandler.ListCompanies)
-		companyGroup.POST("", rg.companyHandler.CreateCompany)
+		// CreateCompany is special: it allows users without a company to create one
+		// So we handle auth check inside or use a looser middleware if needed.
+		// But here we use Protected() because we need the user_id to link the company.
+		companyGroup.POST("", rg.companyHandler.CreateCompany) 
+		
 		companyGroup.GET("/:id", rg.companyHandler.GetCompany)
 		companyGroup.PUT("/:id", rg.companyHandler.UpdateCompany)
 	}

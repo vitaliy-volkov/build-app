@@ -168,9 +168,9 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
       return false;
   };
 
-  const isAdminOrDirector = currentUser.role === UserRole.Admin || currentUser.role === UserRole.Director;
-  const hasFinanceAccess = [UserRole.Director, UserRole.Admin, UserRole.ProjectManager, UserRole.Estimator].includes(currentUser.role);
-  const hasCrmAccess = [UserRole.Director, UserRole.Admin, UserRole.ProjectManager, UserRole.Manager].includes(currentUser.role);
+  const isAdminOrDirector = currentUser.role === 'admin' || currentUser.role === 'director' || currentUser.role === UserRole.Admin || currentUser.role === UserRole.Director;
+  const hasFinanceAccess = ['director', 'admin', 'project_manager', 'estimator'].includes(currentUser.role) || [UserRole.Director, UserRole.Admin, UserRole.ProjectManager, UserRole.Estimator].includes(currentUser.role);
+  const hasCrmAccess = ['director', 'admin', 'project_manager', 'manager'].includes(currentUser.role) || [UserRole.Director, UserRole.Admin, UserRole.ProjectManager, UserRole.Manager].includes(currentUser.role);
 
   // Filter notifications for current user
   const myNotifications = notifications.filter(n => {

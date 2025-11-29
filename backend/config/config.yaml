@@ -1,0 +1,36 @@
+server:
+  port: 8080
+  read_timeout: 10s
+  write_timeout: 10s
+
+database:
+  host: localhost
+  port: 5432
+  user: user
+  password: password
+  dbname: stroy_control
+  ssl_mode: disable
+
+jwt:
+  secret: dev_secret_key_12345
+  access_token_ttl: 15m
+  refresh_token_ttl: 168h
+  issuer: stroy-control-backend
+
+redis:
+  host: localhost
+  port: 6379
+  password: ""
+  db: 0
+
+ai:
+  gateway_url: http://localhost:8000
+  api_key: ""
+
+email:
+  smtp_host: smtp.gmail.com
+  smtp_port: 587
+  smtp_username: "" # Set via env var for security
+  smtp_password: "" # Set via env var for security
+  from_address: noreply@example.com
+  from_name: StroyControl

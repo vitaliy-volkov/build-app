@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"time"
 
+	"stroy-control-backend/internal/email"
 	"stroy-control-backend/internal/models"
 
 	"github.com/gin-gonic/gin"
@@ -47,15 +48,17 @@ type ChangePasswordRequest struct {
 
 // AuthHandler обработчик аутентификации
 type AuthHandler struct {
-	db         *gorm.DB
-	jwtService *JWTService
+	db           *gorm.DB
+	jwtService   *JWTService
+	emailService *email.EmailService
 }
 
 // NewAuthHandler создает новый экземпляр обработчика аутентификации
-func NewAuthHandler(db *gorm.DB, jwtService *JWTService) *AuthHandler {
+func NewAuthHandler(db *gorm.DB, jwtService *JWTService, emailService *email.EmailService) *AuthHandler {
 	return &AuthHandler{
-		db:         db,
-		jwtService: jwtService,
+		db:           db,
+		jwtService:   jwtService,
+		emailService: emailService,
 	}
 }
 

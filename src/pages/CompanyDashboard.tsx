@@ -1,34 +1,24 @@
 import React from 'react';
-import { useApp } from '../App';
-import { Wallet, TrendingUp, Building2, ArrowUpRight, ArrowDownLeft, Activity } from 'lucide-react';
+import { useApp } from '../App'; // Still need currentUser
+import { Wallet, TrendingUp, Building2, ArrowUpRight, ArrowDownLeft, Activity, Loader2 } from 'lucide-react';
 import { PaymentDirection, UserRole, ProjectStatus } from '../types';
 import { useNavigate } from 'react-router-dom';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { useFinanceStats, useTransactions } from '../hooks/useFinance';
+import { useProjects } from '../hooks/useProjects';
 
 export const CompanyDashboard = () => {
-  const { projects, payments, acts, currentUser } = useApp();
+  const { currentUser } = useApp(); // Keep currentUser from context
   const navigate = useNavigate();
 
-  const isDirectorOrAdmin = [UserRole.Director, UserRole.Admin].includes(currentUser.role);
+  // Data Fetching
+  const { data: stats, isLoading: isStatsLoading } = useFinanceStats();
+  const { data: recentTransactions, isLoading: isTxLoading } = useTransactions({ limit: 5 });
+  const { data: projectsData, isLoading: isProjectsLoading } = useProjects({ limit: 1000 }); // Fetch all for count, optimize later
 
-  // Global Stats Calculations
-  const totalIn = payments.filter(p => p.direction === PaymentDirection.In).reduce((acc, p) => acc + p.amount, 0);
-  const totalOut = payments.filter(p => p.direction === PaymentDirection.Out).reduce((acc, p) => acc + p.amount, 0);
-  const balance = totalIn - totalOut;
+  const isDirectorOrAdmin = [UserRole.Director, UserRole.Admin].includes(currentUser?.role || UserRole.Director);
 
-  // Calculate Receivables (Total Acts Value - Total Payments In)
-  const totalCompletedValue = acts.reduce((acc, act) => {
-    return acc + act.items.reduce((sum, item) => sum + (item.quantity_done * item.current_price), 0);
-  }, 0);
-  const receivables = Math.max(0, totalCompletedValue - totalIn);
-
-  const activeProjectsCount = projects.filter(p => p.status === ProjectStatus.Active).length;
-
-  // Chart Data: Cash Flow (Last 6 months mock)
-  const chartData = [
-    { name: 'План', income: 12000000, expense: 8500000 },
-    { name: 'Факт', income: totalIn, expense: totalOut },
-  ];
+  if (!currentUser) return <Loader2 className="animate-spin mx-auto mt-10" />;
 
   if (!isDirectorOrAdmin) {
     return (
@@ -44,6 +34,30 @@ export const CompanyDashboard = () => {
         </button>
       </div>
     );
+  }
+
+  const balance = stats?.balance || 0;
+  // Receivables calculation requires Acts which are not yet API-enabled. 
+  // Setting to 0 for now or we can use a separate hook later.
+  const receivables = 0; 
+
+  // Calculate active projects from API data
+  const activeProjectsCount = projectsData?.data?.filter(p => p.status === ProjectStatus.Active).length || 0;
+
+  // Chart Data
+  const chartData = [
+    { name: 'План', income: 12000000, expense: 8500000 }, // TODO: Fetch planned values
+    { name: 'Факт', income: stats?.income || 0, expense: stats?.expense || 0 },
+  ];
+
+  const isLoading = isStatsLoading || isTxLoading || isProjectsLoading;
+
+  if (isLoading) {
+      return (
+          <div className="flex justify-center items-center h-64">
+              <Loader2 className="animate-spin text-blue-600" size={32} />
+          </div>
+      );
   }
 
   return (
@@ -104,23 +118,23 @@ export const CompanyDashboard = () => {
         <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
            <h3 className="text-lg font-bold text-slate-800 mb-4">Последние операции</h3>
            <div className="space-y-4 overflow-y-auto max-h-64 pr-2">
-              {payments.sort((a,b) => new Date(b.payment_date).getTime() - new Date(a.payment_date).getTime()).slice(0, 5).map(p => (
+              {recentTransactions?.map(p => (
                  <div key={p.id} className="flex justify-between items-center p-3 bg-slate-50 rounded-lg">
                     <div className="flex items-center space-x-3">
-                       <div className={`p-2 rounded-full ${p.direction === PaymentDirection.In ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
-                          {p.direction === PaymentDirection.In ? <ArrowDownLeft size={16} /> : <ArrowUpRight size={16} />}
+                       <div className={`p-2 rounded-full ${p.type === 'income' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
+                          {p.type === 'income' ? <ArrowDownLeft size={16} /> : <ArrowUpRight size={16} />}
                        </div>
                        <div>
-                          <div className="text-sm font-medium text-slate-800">{p.comment}</div>
-                          <div className="text-xs text-slate-500">{p.payment_date}</div>
+                          <div className="text-sm font-medium text-slate-800">{p.description || 'Без описания'}</div>
+                          <div className="text-xs text-slate-500">{new Date(p.date).toLocaleDateString('ru-RU')}</div>
                        </div>
                     </div>
-                    <span className={`font-bold text-sm ${p.direction === PaymentDirection.In ? 'text-green-600' : 'text-red-600'}`}>
-                       {p.direction === PaymentDirection.In ? '+' : '-'}{p.amount.toLocaleString('ru-RU')} ₽
+                    <span className={`font-bold text-sm ${p.type === 'income' ? 'text-green-600' : 'text-red-600'}`}>
+                       {p.type === 'income' ? '+' : '-'}{p.amount.toLocaleString('ru-RU')} ₽
                     </span>
                  </div>
               ))}
-              {payments.length === 0 && <p className="text-center text-slate-400 text-sm">Нет операций</p>}
+              {recentTransactions?.length === 0 && <p className="text-center text-slate-400 text-sm">Нет операций</p>}
            </div>
         </div>
       </div>

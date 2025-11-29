@@ -15,6 +15,8 @@ import (
 	"stroy-control-backend/internal/auth"
 	"stroy-control-backend/internal/company"
 	"stroy-control-backend/internal/config"
+	"stroy-control-backend/internal/email"
+	"stroy-control-backend/internal/finance"
 	"stroy-control-backend/internal/middleware"
 	"stroy-control-backend/internal/project"
 	"stroy-control-backend/internal/redis"
@@ -51,8 +53,11 @@ func main() {
 	// Initialize JWT Service
 	jwtService := auth.NewJWTService(cfg)
 
+	// Initialize Email Service
+	emailService := email.NewEmailService(cfg.Email)
+
 	// Initialize Authentication Router
-	authRouter := auth.NewRouterGroup(db.GetDB(), jwtService)
+	authRouter := auth.NewRouterGroup(db.GetDB(), jwtService, emailService)
 
 	// Initialize Project Router
 	projectRouter := project.NewRouterGroup(db.GetDB(), authRouter.GetMiddleware())
@@ -97,6 +102,9 @@ func main() {
 
 	// Register company routes
 	companyRouter.RegisterRoutes(r)
+
+	// Register finance routes
+	finance.RegisterRoutes(r.Group("/api/v1"), db.GetDB(), authRouter.GetMiddleware())
 
 	// Register AI routes
 	aiRouter.RegisterRoutes(r)

@@ -138,15 +138,15 @@ func (h *CompanyHandler) CreateCompany(c *gin.Context) {
 		return
 	}
 
-	// Проверяем, что пользователь имеет права создавать компании
-	if user.Role != models.RoleAdmin {
-		c.JSON(http.StatusForbidden, models.NewErrorResponse(
-			"Insufficient permissions",
-			http.StatusForbidden,
-			"Only admins can create companies",
-		))
-		return
-	}
+    // Check if user already has a company (optional, but good for onboarding)
+    // If CompanyID is set and not the default/empty one
+    if user.CompanyID != "" && user.CompanyID != "00000000-0000-0000-0000-000000000001" {
+         c.JSON(http.StatusConflict, models.NewErrorResponse(
+            "User already belongs to a company",
+            http.StatusConflict,
+         ))
+         return
+    }
 
 	// Проверяем уникальность INN (если указан)
 	if req.INN != "" {
@@ -160,6 +160,14 @@ func (h *CompanyHandler) CreateCompany(c *gin.Context) {
 		}
 	}
 
+	// Start Transaction
+    tx := h.db.Begin()
+    defer func() {
+        if r := recover(); r != nil {
+            tx.Rollback()
+        }
+    }()
+
 	// Создаем компанию
 	company := models.Company{
 		Name:    req.Name,
@@ -172,7 +180,8 @@ func (h *CompanyHandler) CreateCompany(c *gin.Context) {
 		Website: req.Website,
 	}
 
-	if err := h.db.Create(&company).Error; err != nil {
+	if err := tx.Create(&company).Error; err != nil {
+        tx.Rollback()
 		c.JSON(http.StatusInternalServerError, models.NewErrorResponse(
 			"Failed to create company",
 			http.StatusInternalServerError,
@@ -180,11 +189,38 @@ func (h *CompanyHandler) CreateCompany(c *gin.Context) {
 		return
 	}
 
+    // Link user to company and make them Director
+    updates := map[string]interface{}{
+        "company_id": company.ID,
+        "role":       models.RoleDirector,
+    }
+    if err := tx.Model(&user).Updates(updates).Error; err != nil {
+        tx.Rollback()
+        c.JSON(http.StatusInternalServerError, models.NewErrorResponse(
+            "Failed to link user to company",
+            http.StatusInternalServerError,
+        ))
+        return
+    }
+
+    if err := tx.Commit().Error; err != nil {
+         c.JSON(http.StatusInternalServerError, models.NewErrorResponse(
+            "Transaction failed",
+            http.StatusInternalServerError,
+        ))
+        return
+    }
+
+    // Return updated user info alongside company
+    user.CompanyID = company.ID
+    user.Role = models.RoleDirector
+
 	c.JSON(http.StatusCreated, gin.H{
 		"success": true,
 		"message": "Company created successfully",
 		"data": gin.H{
 			"company": company,
+            "user": user, // Return updated user so frontend can update context
 		},
 	})
 }

@@ -55,20 +55,23 @@ export interface UserStats {
 export interface User {
   id: string;
   name: string;
-  role: UserRole;
-  avatar_initials: string;
+  role: string; // Changed from UserRole enum to string to match backend response (e.g., "director")
+  avatar_initials?: string; // Optional, computed on frontend usually
   email?: string;
-  phone?: string;     // NEW
-  location?: string;  // NEW
-  telegram?: string;  // NEW
-  bio?: string;       // NEW
-  skills?: string[];  // NEW
+  phone?: string;
+  location?: string;
+  telegram?: string;
+  bio?: string;
+  skills?: string[];
   is_active?: boolean;
+  company_id?: string; // Direct link
   
   // Ecosystem & Profile v2.0
-  companies?: UserCompany[]; // Multi-company support
-  external_rating?: number; // 0-5 stars
-  internal_score?: number; // Algorithmic priority score
+  company?: Company; // Backend returns single company relation
+  companies?: UserCompany[]; // Keeping for compatibility if needed, but primary is company
+  
+  external_rating?: number;
+  internal_score?: number;
   balance?: number;
   earnings_history?: EarningRecord[];
   stats?: UserStats;

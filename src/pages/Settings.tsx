@@ -13,7 +13,7 @@ import { v4 as uuidv4 } from 'uuid';
 
 export const Settings = () => {
   const { updateUser, currentUser, companySettings, updateCompanySettings, aiConfig, updateAIConfig } = useApp();
-  const isAdmin = currentUser.role === UserRole.Admin || currentUser.role === UserRole.Director;
+  const isAdmin = currentUser.role === 'admin' || currentUser.role === 'director' || currentUser.role === UserRole.Admin || currentUser.role === UserRole.Director;
   const [activeTab, setActiveTab] = useState<'general' | 'users' | 'ai' | 'aiPayments'>('general');
 
   if (!isAdmin) {

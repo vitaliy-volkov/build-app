@@ -880,18 +880,42 @@ const GlobalModulePage = ({ title, type }: { title: string, type: string }) => {
   );
 };
 
-const AppRoutes = () => {
-  const { isAuthenticated, isLoading, hasError, errors, initializeData } = useApp();
+import { CreateCompany } from './pages/Onboarding/CreateCompany';
+import { ForgotPassword } from './pages/Auth/ForgotPassword';
+import { ResetPassword } from './pages/Auth/ResetPassword';
 
-  return (
-    <LoadingState
-      isLoading={isLoading}
-      hasError={hasError}
-      error={errors.global}
-      onRetry={initializeData}
-    >
-      {!isAuthenticated ? (
-        <PublicLayout>
+const AppRoutes = () => {
+  const { isAuthenticated, isLoading, hasError, errors, initializeData, currentUser } = useApp();
+
+  if (isLoading) {
+    return (
+      <LoadingState
+        isLoading={true}
+        hasError={false}
+        error={null}
+        onRetry={() => {}}
+      >
+        <div /> 
+      </LoadingState>
+    );
+  }
+
+  if (hasError) {
+     return (
+      <LoadingState
+        isLoading={false}
+        hasError={true}
+        error={errors.global}
+        onRetry={initializeData}
+      >
+        <div />
+      </LoadingState>
+     );
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <PublicLayout>
           <Routes>
             <Route path="/" element={<Landing />} />
             <Route path="/estimates-promo" element={<EstimatesPromo />} />
@@ -905,11 +929,29 @@ const AppRoutes = () => {
             <Route path="/auth" element={<Auth />} />
             <Route path="/login" element={<Auth />} />
             <Route path="/register" element={<Auth />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
-        </PublicLayout>
-      ) : (
-        <Layout>
+      </PublicLayout>
+    );
+  }
+
+  // Onboarding Check: User is authenticated but has no company
+  const needsOnboarding = !currentUser?.company_id || currentUser.company_id === '00000000-0000-0000-0000-000000000001';
+  
+  if (needsOnboarding) {
+      return (
+        <Routes>
+             <Route path="/onboarding/create-company" element={<CreateCompany />} />
+             <Route path="*" element={<Navigate to="/onboarding/create-company" replace />} />
+        </Routes>
+      );
+  }
+
+  // Main App Layout
+  return (
+    <Layout>
           <Routes>
             <Route path="/" element={<CompanyDashboard />} />
             <Route path="/projects" element={<ProjectList />} />
@@ -945,9 +987,7 @@ const AppRoutes = () => {
 
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
-        </Layout>
-      )}
-    </LoadingState>
+    </Layout>
   );
 };
 
