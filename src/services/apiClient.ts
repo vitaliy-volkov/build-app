@@ -5,9 +5,12 @@ import {
   EstimateStatus, VatMode, PaymentDirection, 
   AIConfiguration, AITaskType, CompanySettings
 } from '../types';
+import { MOCK_USERS, MOCK_PROJECTS, MOCK_COUNTERPARTIES, MOCK_ESTIMATES } from './mockData';
+import { v4 as uuidv4 } from 'uuid';
 
 // API Base Configuration
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api/v1';
+const USE_MOCK_API = true; // Force mock API for prototype
 
 // Types for API responses
 interface ApiResponse<T> {
@@ -66,7 +69,12 @@ class ApiClient {
 
   constructor(baseURL: string) {
     this.baseURL = baseURL;
-    this.token = localStorage.getItem('access_token');
+    try {
+      this.token = localStorage.getItem('access_token');
+    } catch (e) {
+      console.warn('LocalStorage access failed:', e);
+      this.token = null;
+    }
   }
 
   // Public method to update token
@@ -134,7 +142,13 @@ class ApiClient {
 
       // Если получили 401 и это не запрос на refresh, пытаемся обновить токен
       if (response.status === 401 && retryOn401 && endpoint !== '/auth/refresh') {
-        const refreshToken = localStorage.getItem('refresh_token');
+        let refreshToken: string | null = null;
+        try {
+            refreshToken = localStorage.getItem('refresh_token');
+        } catch (e) {
+            console.warn('LocalStorage access failed:', e);
+        }
+
         if (refreshToken) {
           try {
             await this.refreshToken(refreshToken);
@@ -143,8 +157,12 @@ class ApiClient {
           } catch (refreshError) {
             // Если refresh не удался, очищаем токены и пробрасываем ошибку
             this.token = null;
-            localStorage.removeItem('access_token');
-            localStorage.removeItem('refresh_token');
+            try {
+                localStorage.removeItem('access_token');
+                localStorage.removeItem('refresh_token');
+            } catch (e) {
+                console.warn('LocalStorage clear failed:', e);
+            }
             throw new Error('Session expired. Please login again.');
           }
         }
@@ -163,6 +181,40 @@ class ApiClient {
 
   // Authentication
   async login(email: string, password: string): Promise<ApiResponse<LoginResponse>> {
+    if (USE_MOCK_API) {
+      // Find user by email
+      const user = MOCK_USERS.find(u => u.email.toLowerCase() === email.toLowerCase());
+      
+      // In mock mode, we accept any password if user exists
+      if (user) {
+        const response: ApiResponse<LoginResponse> = {
+          success: true,
+          data: {
+            user,
+            tokens: {
+              access_token: `mock_token_${user.id}`,
+              refresh_token: `mock_refresh_${user.id}`
+            }
+          }
+        };
+
+        this.token = response.data!.tokens.access_token;
+        try {
+            localStorage.setItem('access_token', this.token);
+            localStorage.setItem('refresh_token', response.data!.tokens.refresh_token);
+        } catch (e) {
+            console.warn('LocalStorage save failed:', e);
+        }
+        
+        return response;
+      }
+      
+      return {
+        success: false,
+        error: 'Неверный email или пароль'
+      };
+    }
+
     const response = await this.request<ApiResponse<LoginResponse>>('/auth/login', {
       method: 'POST',
       body: JSON.stringify({ email, password }),
@@ -170,9 +222,13 @@ class ApiClient {
 
     if (response.success && response.data?.tokens) {
       this.token = response.data.tokens.access_token;
-      localStorage.setItem('access_token', this.token);
-      if (response.data.tokens.refresh_token) {
-        localStorage.setItem('refresh_token', response.data.tokens.refresh_token);
+      try {
+        localStorage.setItem('access_token', this.token);
+        if (response.data.tokens.refresh_token) {
+          localStorage.setItem('refresh_token', response.data.tokens.refresh_token);
+        }
+      } catch (e) {
+        console.warn('LocalStorage save failed:', e);
       }
     }
 
@@ -180,6 +236,51 @@ class ApiClient {
   }
 
   async register(data: RegisterRequest): Promise<ApiResponse<LoginResponse>> {
+    if (USE_MOCK_API) {
+      const existingUser = MOCK_USERS.find(u => u.email.toLowerCase() === data.email.toLowerCase());
+      if (existingUser) {
+        return { success: false, error: 'Пользователь с таким email уже существует' };
+      }
+
+      const newUser: User = {
+        id: uuidv4(),
+        name: data.name,
+        email: data.email,
+        role: (data.role as UserRole) || UserRole.Director,
+        avatar_initials: data.name.substring(0, 2).toUpperCase(),
+        is_active: true,
+        company_id: data.company_id,
+        // Defaults
+        balance: 0,
+        earnings_history: [],
+        skills: [],
+        companies: []
+      };
+
+      MOCK_USERS.push(newUser);
+
+      const response: ApiResponse<LoginResponse> = {
+        success: true,
+        data: {
+          user: newUser,
+          tokens: {
+            access_token: `mock_token_${newUser.id}`,
+            refresh_token: `mock_refresh_${newUser.id}`
+          }
+        }
+      };
+
+      this.token = response.data!.tokens.access_token;
+      try {
+        localStorage.setItem('access_token', this.token);
+        localStorage.setItem('refresh_token', response.data!.tokens.refresh_token);
+      } catch (e) {
+        console.warn('LocalStorage save failed:', e);
+      }
+
+      return response;
+    }
+
     const response = await this.request<ApiResponse<LoginResponse>>('/auth/register', {
       method: 'POST',
       body: JSON.stringify(data),
@@ -187,9 +288,13 @@ class ApiClient {
 
     if (response.success && response.data?.tokens) {
       this.token = response.data.tokens.access_token;
-      localStorage.setItem('access_token', this.token);
-      if (response.data.tokens.refresh_token) {
-        localStorage.setItem('refresh_token', response.data.tokens.refresh_token);
+      try {
+        localStorage.setItem('access_token', this.token);
+        if (response.data.tokens.refresh_token) {
+          localStorage.setItem('refresh_token', response.data.tokens.refresh_token);
+        }
+      } catch (e) {
+        console.warn('LocalStorage save failed:', e);
       }
     }
 
@@ -197,18 +302,40 @@ class ApiClient {
   }
 
   async getCurrentUser(): Promise<ApiResponse<{ user: User }>> {
+    if (USE_MOCK_API) {
+      if (!this.token) {
+         return { success: false, error: 'No token' };
+      }
+      
+      // Try to extract ID from mock token
+      if (this.token.startsWith('mock_token_')) {
+          const userId = this.token.replace('mock_token_', '');
+          const user = MOCK_USERS.find(u => u.id === userId);
+          if (user) {
+              return { success: true, data: { user } };
+          }
+      }
+      // Fallback for default token or testing
+      return { success: true, data: { user: MOCK_USERS[0] } };
+    }
     return this.request<ApiResponse<{ user: User }>>('/auth/me');
   }
 
   async logout(): Promise<void> {
     try {
-      await this.request('/auth/logout', { method: 'POST' });
+      if (!USE_MOCK_API) {
+        await this.request('/auth/logout', { method: 'POST' });
+      }
     } catch (error) {
       console.error('Logout failed:', error);
     } finally {
       this.token = null;
-      localStorage.removeItem('access_token');
-      localStorage.removeItem('refresh_token');
+      try {
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('refresh_token');
+      } catch (e) {
+        console.warn('LocalStorage clear failed:', e);
+      }
     }
   }
 
@@ -220,9 +347,13 @@ class ApiClient {
 
     if (response.success && response.data) {
       this.token = response.data.access_token;
-      localStorage.setItem('access_token', response.data.access_token);
-      if (response.data.refresh_token) {
-        localStorage.setItem('refresh_token', response.data.refresh_token);
+      try {
+        localStorage.setItem('access_token', response.data.access_token);
+        if (response.data.refresh_token) {
+          localStorage.setItem('refresh_token', response.data.refresh_token);
+        }
+      } catch (e) {
+        console.warn('LocalStorage save failed:', e);
       }
     }
 
@@ -236,6 +367,21 @@ class ApiClient {
     sort_by?: string;
     sort_desc?: boolean;
   }): Promise<ApiResponse<PaginatedResponse<Project[]>>> {
+    if (USE_MOCK_API) {
+        return {
+            success: true,
+            data: {
+                data: MOCK_PROJECTS,
+                total: MOCK_PROJECTS.length,
+                page: 1,
+                limit: 1000,
+                total_pages: 1,
+                has_next: false,
+                has_prev: false
+            }
+        };
+    }
+
     const queryParams = new URLSearchParams();
     if (params?.page) queryParams.append('page', params.page.toString());
     if (params?.limit) queryParams.append('limit', params.limit.toString());
@@ -251,6 +397,21 @@ class ApiClient {
   }
 
   async createProject(data: Partial<Project>): Promise<ApiResponse<{ project: Project }>> {
+    if (USE_MOCK_API) {
+        const newProject = {
+            ...data,
+            id: uuidv4(),
+            status: data.status || 'Active',
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+        } as Project;
+        
+        return {
+            success: true,
+            data: { project: newProject }
+        };
+    }
+
     return this.request<ApiResponse<{ project: Project }>>('/projects', {
       method: 'POST',
       body: JSON.stringify(data),
@@ -258,6 +419,12 @@ class ApiClient {
   }
 
   async updateProject(id: string, data: Partial<Project>): Promise<ApiResponse<{ project: Project }>> {
+    if (USE_MOCK_API) {
+        return {
+            success: true,
+            data: { project: { ...data, id } as Project }
+        };
+    }
     return this.request<ApiResponse<{ project: Project }>>(`/projects/${id}`, {
       method: 'PUT',
       body: JSON.stringify(data),
@@ -265,6 +432,9 @@ class ApiClient {
   }
 
   async deleteProject(id: string): Promise<ApiResponse<void>> {
+    if (USE_MOCK_API) {
+        return { success: true };
+    }
     return this.request<ApiResponse<void>>(`/projects/${id}`, {
       method: 'DELETE',
     });
@@ -382,6 +552,21 @@ class ApiClient {
     limit?: number;
     type?: string;
   }): Promise<ApiResponse<PaginatedResponse<Counterparty[]>>> {
+    if (USE_MOCK_API) {
+        return {
+            success: true,
+            data: {
+                data: MOCK_COUNTERPARTIES,
+                total: MOCK_COUNTERPARTIES.length,
+                page: 1,
+                limit: 1000,
+                total_pages: 1,
+                has_next: false,
+                has_prev: false
+            }
+        };
+    }
+
     const queryParams = new URLSearchParams();
     if (params?.page) queryParams.append('page', params.page.toString());
     if (params?.limit) queryParams.append('limit', params.limit.toString());
@@ -392,6 +577,19 @@ class ApiClient {
   }
 
   async createCounterparty(data: Partial<Counterparty>): Promise<ApiResponse<{ counterparty: Counterparty }>> {
+    if (USE_MOCK_API) {
+        const newCounterparty = {
+            ...data,
+            id: uuidv4(),
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+        } as Counterparty;
+        
+        return {
+            success: true,
+            data: { counterparty: newCounterparty }
+        };
+    }
     return this.request<ApiResponse<{ counterparty: Counterparty }>>('/counterparties', {
       method: 'POST',
       body: JSON.stringify(data),
@@ -404,6 +602,25 @@ class ApiClient {
     limit?: number;
     status?: EstimateStatus;
   }): Promise<ApiResponse<PaginatedResponse<Estimate[]>>> {
+    if (USE_MOCK_API) {
+        let estimates = MOCK_ESTIMATES;
+        if (projectId) {
+            estimates = estimates.filter(e => e.project_id === projectId);
+        }
+        return {
+            success: true,
+            data: {
+                data: estimates,
+                total: estimates.length,
+                page: 1,
+                limit: 1000,
+                total_pages: 1,
+                has_next: false,
+                has_prev: false
+            }
+        };
+    }
+
     const queryParams = new URLSearchParams();
     if (params?.page) queryParams.append('page', params.page.toString());
     if (params?.limit) queryParams.append('limit', params.limit.toString());
@@ -494,7 +711,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     const initAuth = async () => {
-      const savedToken = localStorage.getItem('access_token');
+      let savedToken: string | null = null;
+      try {
+        savedToken = localStorage.getItem('access_token');
+      } catch (e) {
+        console.warn('LocalStorage access failed:', e);
+      }
+
       if (savedToken) {
         try {
           const response = await apiClient.getCurrentUser();
@@ -503,13 +726,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setToken(savedToken);
             apiClient.setToken(savedToken);
           } else {
-            localStorage.removeItem('access_token');
-            localStorage.removeItem('refresh_token');
+            try {
+                localStorage.removeItem('access_token');
+                localStorage.removeItem('refresh_token');
+            } catch (e) {
+                console.warn('LocalStorage clear failed:', e);
+            }
           }
         } catch (error) {
           console.error('Auth initialization failed:', error);
-          localStorage.removeItem('access_token');
-          localStorage.removeItem('refresh_token');
+          try {
+            localStorage.removeItem('access_token');
+            localStorage.removeItem('refresh_token');
+          } catch (e) {
+            console.warn('LocalStorage clear failed:', e);
+          }
         }
       }
       setIsLoading(false);
@@ -525,7 +756,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUser(response.data.user);
         setToken(response.data.tokens.access_token);
         if (response.data.tokens.refresh_token) {
-          localStorage.setItem('refresh_token', response.data.tokens.refresh_token);
+          try {
+            localStorage.setItem('refresh_token', response.data.tokens.refresh_token);
+          } catch (e) {
+            console.warn('LocalStorage save failed:', e);
+          }
         }
         return true;
       }
@@ -543,7 +778,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUser(response.data.user);
         setToken(response.data.tokens.access_token);
         if (response.data.tokens.refresh_token) {
-          localStorage.setItem('refresh_token', response.data.tokens.refresh_token);
+          try {
+            localStorage.setItem('refresh_token', response.data.tokens.refresh_token);
+          } catch (e) {
+            console.warn('LocalStorage save failed:', e);
+          }
         }
         return true;
       }
