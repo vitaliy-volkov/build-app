@@ -1,5 +1,34 @@
+# Node
 node_modules
-.DS_Store
 dist
 .env
 *.local
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Go
+backend/server
+backend/bin/
+backend/*.log
+backend/coverage.out
+backend/.env.production
+backend/.secrets
+
+# Python
+ai-gateway/__pycache__/
+ai-gateway/*.pyc
+ai-gateway/.env
+ai-gateway/.venv/
+ai-gateway/venv/
+ai-gateway/logs/
+
+# Logs
+*.log
+logs/
+
+# General
+.DS_Store
+.idea/
+.vscode/
