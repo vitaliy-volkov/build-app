@@ -8,13 +8,13 @@ RUN apk add --no-cache git ca-certificates tzdata gcc musl-dev
 WORKDIR /build
 
 # Копирование go mod файлов
-COPY go.mod go.sum ./
+COPY backend/go.mod backend/go.sum ./
 
 # Загрузка зависимостей (кэширование слоя)
 RUN go mod download
 
 # Копирование исходного кода
-COPY . .
+COPY backend/ .
 
 # Сборка приложения с production оптимизацией
 RUN CGO_ENABLED=1 CGO_CFLAGS_ALLOW=".*" \
@@ -45,8 +45,8 @@ WORKDIR /app
 
 # Копирование только необходимых файлов из builder
 COPY --from=builder /build/server .
-COPY --chown=appuser:appgroup config/ ./config/
-COPY --chown=appuser:appgroup migrations/ ./migrations/
+COPY --chown=appuser:appgroup backend/config/ ./config/
+COPY --chown=appuser:appgroup backend/migrations/ ./migrations/
 
 # Установка прав доступа на бинарник
 RUN chmod +x server && \
