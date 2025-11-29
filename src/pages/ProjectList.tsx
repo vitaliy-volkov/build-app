@@ -63,7 +63,7 @@ export const ProjectList = () => {
         {filteredProjects.map(project => (
           <div 
             key={project.id} 
-            onClick={() => navigate(`/project/${project.id}`)}
+            onClick={() => navigate(`/projects/${project.id}`)}
             className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 hover:shadow-md transition-all cursor-pointer group hover:-translate-y-1"
           >
             <div className="flex justify-between items-start mb-4">
@@ -110,6 +110,7 @@ export const ProjectList = () => {
             </div>
           </div>
         ))}
+
         
         {filteredProjects.length === 0 && (
            <div className="col-span-full py-12 text-center text-slate-400 bg-slate-50/50 rounded-xl border border-dashed border-slate-200">
@@ -125,26 +126,32 @@ export const ProjectList = () => {
           onClose={() => setIsNewProjectModalOpen(false)}
           templates={templates}
           counterparties={counterparties}
-          onSave={(data, templateId) => {
-            if (templateId) {
-               createProjectFromTemplate(templateId, data);
-            } else {
-               // Manual Create
-               addProject({
-                  id: uuidv4(),
-                  name: data.name!,
-                  address: data.address!,
-                  contract_number: 'Б/Н',
-                  contract_date: new Date().toISOString().split('T')[0],
-                  description: '',
-                  customer_id: data.customer_id!,
-                  general_contractor_id: '',
-                  contact_person_id: '',
-                  status: ProjectStatus.Planning,
-                  team: []
-               });
+          onSave={async (data, templateId) => {
+            try {
+              if (templateId) {
+                 createProjectFromTemplate(templateId, data);
+              } else {
+                 // Manual Create
+                 const newId = uuidv4();
+                 await addProject({
+                    id: newId,
+                    name: data.name!,
+                    address: data.address!,
+                    contract_number: 'Б/Н',
+                    contract_date: new Date().toISOString().split('T')[0],
+                    description: '',
+                    customer_id: data.customer_id!,
+                    general_contractor_id: '',
+                    contact_person_id: '',
+                    status: ProjectStatus.Planning,
+                    team: []
+                 });
+                 navigate(`/projects/${newId}`);
+              }
+              setIsNewProjectModalOpen(false);
+            } catch (error) {
+              console.error("Failed to create project", error);
             }
-            setIsNewProjectModalOpen(false);
           }}
         />
       )}
