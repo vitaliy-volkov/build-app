@@ -137,3 +137,6 @@ curl -X POST http://localhost:8080/api/v1/auth/login \
 4. Улучшить UX при обработке ошибок
 5. Добавить индикацию загрузки при refresh token
 
+
+
+
