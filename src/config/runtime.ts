@@ -1,7 +1,7 @@
 export const runtimeConfig = {
   // API URL: Must be provided in environment variables. 
   // In development, it can fall back to localhost, but in production it should be set.
-  apiUrl: import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://localhost:8080/api/v1' : ''),
+  apiUrl: import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://localhost:8080' : ''),
   
   // App Environment
   appEnv: import.meta.env.VITE_APP_ENV || 'development',
