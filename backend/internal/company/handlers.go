@@ -77,7 +77,11 @@ func (h *CompanyHandler) ListCompanies(c *gin.Context) {
 
 	// Если пользователь не админ, показываем только его компанию
 	if user.Role != models.RoleAdmin {
-		query = query.Where("id = ?", user.CompanyID)
+		if user.CompanyID == nil {
+			c.JSON(http.StatusOK, models.NewPaginatedResponse(gin.H{"companies": []models.Company{}}, 0, page, limit))
+			return
+		}
+		query = query.Where("id = ?", *user.CompanyID)
 	}
 
 	// Применяем сортировку
@@ -140,7 +144,7 @@ func (h *CompanyHandler) CreateCompany(c *gin.Context) {
 
     // Check if user already has a company (optional, but good for onboarding)
     // If CompanyID is set and not the default/empty one
-    if user.CompanyID != "" && user.CompanyID != "00000000-0000-0000-0000-000000000001" {
+    if user.CompanyID != nil && *user.CompanyID != "" && *user.CompanyID != "00000000-0000-0000-0000-000000000001" {
          c.JSON(http.StatusConflict, models.NewErrorResponse(
             "User already belongs to a company",
             http.StatusConflict,
@@ -212,7 +216,7 @@ func (h *CompanyHandler) CreateCompany(c *gin.Context) {
     }
 
     // Return updated user info alongside company
-    user.CompanyID = company.ID
+    user.CompanyID = &company.ID
     user.Role = models.RoleDirector
 
 	c.JSON(http.StatusCreated, gin.H{
@@ -260,7 +264,7 @@ func (h *CompanyHandler) GetCompany(c *gin.Context) {
 	}
 
 	// Проверяем доступ к компании
-	if company.ID != user.CompanyID && user.Role != models.RoleAdmin {
+	if (user.CompanyID == nil || company.ID != *user.CompanyID) && user.Role != models.RoleAdmin {
 		c.JSON(http.StatusForbidden, models.NewErrorResponse(
 			"Insufficient permissions",
 			http.StatusForbidden,
@@ -321,7 +325,7 @@ func (h *CompanyHandler) UpdateCompany(c *gin.Context) {
 	}
 
 	// Проверяем доступ к компании
-	if company.ID != user.CompanyID && user.Role != models.RoleAdmin {
+	if (user.CompanyID == nil || company.ID != *user.CompanyID) && user.Role != models.RoleAdmin {
 		c.JSON(http.StatusForbidden, models.NewErrorResponse(
 			"Insufficient permissions",
 			http.StatusForbidden,

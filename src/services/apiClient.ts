@@ -58,6 +58,8 @@ interface AuthContextType {
   logout: () => void;
   updateUser: (user: User) => void;
   isAuthenticated: boolean;
+  requestPasswordReset: (email: string) => Promise<boolean>;
+  confirmPasswordReset: (data: { email: string; code: string; new_password: string }) => Promise<boolean>;
 }
 
 // Base API client
@@ -195,6 +197,20 @@ class ApiClient {
     }
 
     return response;
+  }
+
+  async requestPasswordReset(email: string): Promise<ApiResponse<void>> {
+    return this.request<ApiResponse<void>>('/auth/forgot-password', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    });
+  }
+
+  async confirmPasswordReset(data: { email: string; code: string; new_password: string }): Promise<ApiResponse<void>> {
+    return this.request<ApiResponse<void>>('/auth/reset-password', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
   }
 
   async getCurrentUser(): Promise<ApiResponse<{ user: User }>> {
@@ -572,6 +588,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUser(prev => ({ ...prev, ...updatedUser }));
   };
 
+  const requestPasswordReset = async (email: string): Promise<boolean> => {
+    try {
+      const response = await apiClient.requestPasswordReset(email);
+      return response.success;
+    } catch (error) {
+      console.error('Password reset request failed:', error);
+      return false;
+    }
+  };
+
+  const confirmPasswordReset = async (data: { email: string; code: string; new_password: string }): Promise<boolean> => {
+    try {
+      const response = await apiClient.confirmPasswordReset(data);
+      return response.success;
+    } catch (error) {
+      console.error('Password reset confirmation failed:', error);
+      return false;
+    }
+  };
+
   const value: AuthContextType = {
     user,
     token,
@@ -579,8 +615,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     login,
     register,
     logout,
-    updateUser, // Expose this
+    updateUser,
     isAuthenticated: !!user,
+    requestPasswordReset,
+    confirmPasswordReset,
   };
 
   return React.createElement(AuthContext.Provider, { value }, children);

@@ -90,12 +90,17 @@ func (h *ProjectHandler) ListProjects(c *gin.Context) {
 		return
 	}
 
+	if user.CompanyID == nil {
+		c.JSON(http.StatusOK, models.NewPaginatedResponse(gin.H{"projects": []models.Project{}}, 0, page, limit))
+		return
+	}
+
 	// Базовый запрос
 	query := h.db.Model(&models.Project{}).
 		Preload("Company").
 		Preload("Customer").
 		Preload("Team.User").
-		Where("company_id = ? AND deleted_at IS NULL", user.CompanyID)
+		Where("company_id = ? AND deleted_at IS NULL", *user.CompanyID)
 
 	// Применяем сортировку
 	if sortDesc {
@@ -168,7 +173,7 @@ func (h *ProjectHandler) CreateProject(c *gin.Context) {
 	}
 
 	// Проверяем, что пользователь имеет доступ к указанной компании
-	if user.CompanyID != req.CompanyID && user.Role != models.RoleAdmin {
+	if (user.CompanyID == nil || *user.CompanyID != req.CompanyID) && user.Role != models.RoleAdmin {
 		c.JSON(http.StatusForbidden, models.NewErrorResponse(
 			"Insufficient permissions",
 			http.StatusForbidden,
@@ -262,7 +267,7 @@ func (h *ProjectHandler) GetProject(c *gin.Context) {
 	}
 
 	// Проверяем доступ к проекту
-	if project.CompanyID != user.CompanyID && user.Role != models.RoleAdmin {
+	if (user.CompanyID == nil || project.CompanyID != *user.CompanyID) && user.Role != models.RoleAdmin {
 		c.JSON(http.StatusForbidden, models.NewErrorResponse(
 			"Insufficient permissions",
 			http.StatusForbidden,
@@ -323,7 +328,7 @@ func (h *ProjectHandler) UpdateProject(c *gin.Context) {
 	}
 
 	// Проверяем доступ к проекту
-	if project.CompanyID != user.CompanyID && user.Role != models.RoleAdmin {
+	if (user.CompanyID == nil || project.CompanyID != *user.CompanyID) && user.Role != models.RoleAdmin {
 		c.JSON(http.StatusForbidden, models.NewErrorResponse(
 			"Insufficient permissions",
 			http.StatusForbidden,
@@ -434,7 +439,7 @@ func (h *ProjectHandler) DeleteProject(c *gin.Context) {
 	}
 
 	// Проверяем доступ к проекту
-	if project.CompanyID != user.CompanyID && user.Role != models.RoleAdmin {
+	if (user.CompanyID == nil || project.CompanyID != *user.CompanyID) && user.Role != models.RoleAdmin {
 		c.JSON(http.StatusForbidden, models.NewErrorResponse(
 			"Insufficient permissions",
 			http.StatusForbidden,

@@ -41,7 +41,12 @@ func (h *FinanceHandler) GetTransactions(c *gin.Context) {
 	projectID := c.Query("project_id")
 	typeFilter := c.Query("type")
 
-	query := h.db.Model(&models.Transaction{}).Where("company_id = ?", user.CompanyID)
+	if user.CompanyID == nil {
+		c.JSON(http.StatusOK, models.NewPaginatedResponse([]models.Transaction{}, 0, page, limit))
+		return
+	}
+
+	query := h.db.Model(&models.Transaction{}).Where("company_id = ?", *user.CompanyID)
 
 	if projectID != "" {
 		query = query.Where("project_id = ?", projectID)
@@ -89,8 +94,13 @@ func (h *FinanceHandler) CreateTransaction(c *gin.Context) {
 		status = models.TransactionStatusPaid // Default
 	}
 
+	if user.CompanyID == nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "User must belong to a company to create transactions"})
+		return
+	}
+
 	tx := models.Transaction{
-		CompanyID:   user.CompanyID,
+		CompanyID:   *user.CompanyID,
 		ProjectID:   req.ProjectID,
 		Date:        date,
 		Amount:      req.Amount,
@@ -123,11 +133,13 @@ func (h *FinanceHandler) GetStats(c *gin.Context) {
     }
 
     var results []Result
-    h.db.Model(&models.Transaction{}).
-        Select("type, sum(amount) as total").
-        Where("company_id = ? AND status = ?", user.CompanyID, models.TransactionStatusPaid).
-        Group("type").
-        Scan(&results)
+    if user.CompanyID != nil {
+        h.db.Model(&models.Transaction{}).
+            Select("type, sum(amount) as total").
+            Where("company_id = ? AND status = ?", *user.CompanyID, models.TransactionStatusPaid).
+            Group("type").
+            Scan(&results)
+    }
 
     stats := gin.H{
         "income": 0.0,
