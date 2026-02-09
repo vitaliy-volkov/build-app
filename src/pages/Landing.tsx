@@ -1,7 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { useApp } from '../App';
 import { 
   LayoutDashboard, CheckCircle2, TrendingUp, Users, Shield, 
   ArrowRight, Building2, BarChart3, Wallet, FileText, Sparkles, 
@@ -11,9 +10,55 @@ import {
 } from 'lucide-react';
 
 export const Landing = () => {
-  const navigate = useNavigate();
-  const { login } = useApp();
   const [faqOpen, setFaqOpen] = useState<number | null>(null);
+
+  const painPoints = [
+    {
+      title: 'Хаос в сметах',
+      problem: 'Сметы в Excel, версии теряются, формулы слетают. Заказчик не понимает, за что платит.',
+      solution: 'Единая база смет с версионностью. Прозрачный доступ для клиента. Авто-расчет маржи.',
+      widget: <ChaosWidget />
+    },
+    {
+      title: 'Кассовые разрывы',
+      problem: 'Деньги с нового объекта уходят на закрытие дыр в старом. В итоге — нечем платить рабочим.',
+      solution: 'Платежный календарь и P&L отчеты. Вы видите реальную прибыль по каждому объекту отдельно.',
+      widget: <GapWidget />
+    },
+    {
+      title: 'Воровство и откаты',
+      problem: 'Снабженцы завышают цены, материалы пропадают со склада. Невозможно отследить каждую закупку.',
+      solution: 'AI-анализ цен. Система подсвечивает подозрительные транзакции и отклонения от рынка.',
+      widget: <TheftWidget />
+    }
+  ];
+
+  const faqItems = [
+    {
+      question: 'Поможет ли система, если у меня сейчас бардак в финансах?',
+      answer: 'Да, это основная задача сервиса. Вы начнете вносить все операции в единый реестр, разнесете их по проектам и статьям. Уже через месяц вы увидите реальную картину: где теряете деньги, а где зарабатываете. Мы даем готовые шаблоны статей расходов, чтобы вам было проще начать.'
+    },
+    {
+      question: 'Сложно ли разобраться? Мои прорабы не любят компьютеры.',
+      answer: 'Мы сделали интерфейс максимально простым, похожим на привычные мессенджеры. Для прорабов есть мобильная версия: они могут просто диктовать отчеты голосом или отправлять фото. Обучение занимает 15 минут.'
+    },
+    {
+      question: 'Почему подписка, а не разовая покупка?',
+      answer: 'Облачный сервис гарантирует, что ваши данные никогда не потеряются (как это бывает с файлами на жестком диске). Плюс мы постоянно обновляем функции, добавляем новые возможности AI и поддерживаем актуальность баз цен. Это невозможно при разовой продаже.'
+    },
+    {
+      question: 'Насколько безопасны мои данные?',
+      answer: 'Мы используем шифрование банковского уровня (SSL/TLS). Ваши сметы, контакты клиентов и финансовые данные хранятся в защищенном облаке. Никто, включая наших сотрудников, не имеет к ним доступа без вашего разрешения. Резервное копирование происходит ежедневно.'
+    },
+    {
+      question: 'Можно ли перенести старые сметы из Excel?',
+      answer: 'Да! Наш AI-модуль умеет читать файлы Excel и PDF. Просто загрузите файл, и система автоматически распознает позиции, цены и объемы, превратив их в умную смету внутри сервиса.'
+    },
+    {
+      question: 'Есть ли поддержка?',
+      answer: 'Конечно. В чате внутри приложения работает служба заботы. На тарифах Бизнес и выше доступен персональный менеджер, который поможет настроить систему под процессы вашей компании.'
+    }
+  ];
 
   const toggleFaq = (index: number) => {
     setFaqOpen(faqOpen === index ? null : index);
@@ -22,7 +67,7 @@ export const Landing = () => {
   return (
     <>
       {/* --- HERO SECTION --- */}
-      <section className="pt-32 pb-16 md:pt-40 md:pb-24 px-4 relative overflow-hidden">
+      <section className="pt-24 pb-14 md:pt-36 md:pb-20 px-4 relative overflow-hidden">
         <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-blue-400/10 rounded-full blur-[120px] -z-10 pointer-events-none"></div>
         <div className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-purple-400/10 rounded-full blur-[100px] -z-10 pointer-events-none"></div>
         
@@ -34,14 +79,14 @@ export const Landing = () => {
               Версия 7.0: Нейросети для стройки
             </div>
             
-            <h1 className="text-5xl md:text-7xl font-extrabold text-slate-900 tracking-tight mb-6 leading-[1.1] animate-in fade-in slide-in-from-bottom-6 duration-700">
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-extrabold text-slate-900 tracking-tight mb-6 leading-[1.1] animate-in fade-in slide-in-from-bottom-6 duration-700">
               Управление стройкой <br />
-              <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600">
+              <span className="text-slate-800">
                 без хаоса и потерь
               </span>
             </h1>
             
-            <p className="text-lg md:text-xl text-slate-500 mb-8 leading-relaxed max-w-xl animate-in fade-in slide-in-from-bottom-8 duration-700">
+            <p className="text-lg md:text-xl text-slate-600 mb-8 leading-relaxed max-w-xl animate-in fade-in slide-in-from-bottom-8 duration-700">
               Автоматизируйте сметы, финансы и снабжение в одной системе. Искусственный интеллект найдет ошибки в расчетах и сэкономит до 20% бюджета.
             </p>
             
@@ -49,7 +94,7 @@ export const Landing = () => {
                <QuickApplicationForm />
             </div>
 
-            <div className="flex items-center space-x-6 text-sm text-slate-500 animate-in fade-in slide-in-from-bottom-12 duration-1000">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-6 text-sm text-slate-600 animate-in fade-in slide-in-from-bottom-12 duration-1000">
                <div className="flex items-center"><CheckCircle2 size={16} className="text-green-500 mr-2"/> 14 дней бесплатно</div>
                <div className="flex items-center"><CheckCircle2 size={16} className="text-green-500 mr-2"/> Без карты</div>
             </div>
@@ -57,7 +102,7 @@ export const Landing = () => {
 
           {/* Right Demo Interface */}
           <div className="relative animate-in fade-in zoom-in-95 duration-1000 delay-200 lg:h-[600px] flex items-center justify-center">
-             <div className="relative bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden w-full aspect-[4/3] transform rotate-1 hover:rotate-0 transition-transform duration-500 group">
+             <div className="relative bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden w-full aspect-[5/4] sm:aspect-[4/3] sm:transform sm:rotate-1 sm:hover:rotate-0 transition-transform duration-500 group">
                 {/* --- Mock Interface --- */}
                 <div className="w-full h-full bg-slate-50 flex text-xs md:text-sm font-sans select-none cursor-default">
                     {/* Sidebar Mock */}
@@ -181,24 +226,9 @@ export const Landing = () => {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-               <PainPointCard 
-                  title="Хаос в сметах"
-                  problem="Сметы в Excel, версии теряются, формулы слетают. Заказчик не понимает, за что платит."
-                  solution="Единая база смет с версионностью. Прозрачный доступ для клиента. Авто-расчет маржи."
-                  widget={<ChaosWidget />}
-               />
-               <PainPointCard 
-                  title="Кассовые разрывы"
-                  problem="Деньги с нового объекта уходят на закрытие дыр в старом. В итоге — нечем платить рабочим."
-                  solution="Платежный календарь и P&L отчеты. Вы видите реальную прибыль по каждому объекту отдельно."
-                  widget={<GapWidget />}
-               />
-               <PainPointCard 
-                  title="Воровство и откаты"
-                  problem="Снабженцы завышают цены, материалы пропадают со склада. Невозможно отследить каждую закупку."
-                  solution="AI-анализ цен. Система подсвечивает подозрительные транзакции и отклонения от рынка."
-                  widget={<TheftWidget />}
-               />
+               {painPoints.map((item) => (
+                 <PainPointCard key={item.title} title={item.title} problem={item.problem} solution={item.solution} widget={item.widget} />
+               ))}
             </div>
          </div>
       </section>
@@ -355,36 +385,15 @@ export const Landing = () => {
             <p className="text-center text-slate-500 mb-12">Всё, что нужно знать перед стартом.</p>
             
             <div className="space-y-4">
-               <FaqItem 
-                  question="Поможет ли система, если у меня сейчас бардак в финансах?" 
-                  answer="Да, это основная задача сервиса. Вы начнете вносить все операции в единый реестр, разнесете их по проектам и статьям. Уже через месяц вы увидите реальную картину: где теряете деньги, а где зарабатываете. Мы даем готовые шаблоны статей расходов, чтобы вам было проще начать."
-                  isOpen={faqOpen === 0} onClick={() => toggleFaq(0)}
-               />
-               <FaqItem 
-                  question="Сложно ли разобраться? Мои прорабы не любят компьютеры." 
-                  answer="Мы сделали интерфейс максимально простым, похожим на привычные мессенджеры. Для прорабов есть мобильная версия: они могут просто диктовать отчеты голосом или отправлять фото. Обучение занимает 15 минут."
-                  isOpen={faqOpen === 1} onClick={() => toggleFaq(1)}
-               />
-               <FaqItem 
-                  question="Почему подписка, а не разовая покупка?" 
-                  answer="Облачный сервис гарантирует, что ваши данные никогда не потеряются (как это бывает с файлами на жестком диске). Плюс мы постоянно обновляем функции, добавляем новые возможности AI и поддерживаем актуальность баз цен. Это невозможно при разовой продаже."
-                  isOpen={faqOpen === 2} onClick={() => toggleFaq(2)}
-               />
-               <FaqItem 
-                  question="Насколько безопасны мои данные?" 
-                  answer="Мы используем шифрование банковского уровня (SSL/TLS). Ваши сметы, контакты клиентов и финансовые данные хранятся в защищенном облаке. Никто, включая наших сотрудников, не имеет к ним доступа без вашего разрешения. Резервное копирование происходит ежедневно."
-                  isOpen={faqOpen === 3} onClick={() => toggleFaq(3)}
-               />
-               <FaqItem 
-                  question="Можно ли перенести старые сметы из Excel?" 
-                  answer="Да! Наш AI-модуль умеет читать файлы Excel и PDF. Просто загрузите файл, и система автоматически распознает позиции, цены и объемы, превратив их в умную смету внутри сервиса."
-                  isOpen={faqOpen === 4} onClick={() => toggleFaq(4)}
-               />
-               <FaqItem 
-                  question="Есть ли поддержка?" 
-                  answer="Конечно. В чате внутри приложения работает служба заботы. На тарифах Бизнес и выше доступен персональный менеджер, который поможет настроить систему под процессы вашей компании."
-                  isOpen={faqOpen === 5} onClick={() => toggleFaq(5)}
-               />
+              {faqItems.map((item, index) => (
+                <FaqItem
+                  key={item.question}
+                  question={item.question}
+                  answer={item.answer}
+                  isOpen={faqOpen === index}
+                  onClick={() => toggleFaq(index)}
+                />
+              ))}
             </div>
          </div>
       </section>
