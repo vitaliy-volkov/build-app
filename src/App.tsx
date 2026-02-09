@@ -38,7 +38,6 @@ import { EstimatesList } from './pages/EstimatesList';
 import { Resources } from './pages/Resources';
 import { Measurements } from './pages/Measurements';
 import { Landing } from './pages/Landing';
-import { Auth } from './pages/Auth';
 import { Profile } from './pages/Profile';
 import { EstimatesPromo, FinancePromo, AIPromo, SupplyPromo } from './pages/PromoPages';
 import { About, Contacts } from './pages/InfoPages';
@@ -1004,9 +1003,11 @@ const GlobalModulePage = ({ title, type }: { title: string, type: string }) => {
   );
 };
 
+import { LoginPage } from './pages/auth/LoginPage';
+import { RegisterPage } from './pages/auth/RegisterPage';
+import { ForgotPasswordPage } from './pages/auth/ForgotPasswordPage';
+import { ResetPasswordPage } from './pages/auth/ResetPasswordPage';
 import { CreateCompany } from './pages/Onboarding/CreateCompany';
-import { ForgotPassword } from './pages/Auth/ForgotPassword';
-import { ResetPassword } from './pages/Auth/ResetPassword';
 
 const AppRoutes = () => {
   const { isAuthenticated, isLoading, hasError, errors, initializeData, currentUser } = useApp();
@@ -1050,11 +1051,11 @@ const AppRoutes = () => {
             <Route path="/contacts" element={<Contacts />} />
             <Route path="/blog" element={<Blog />} />
             <Route path="/blog/:id" element={<BlogPost />} />
-            <Route path="/auth" element={<Auth />} />
-            <Route path="/login" element={<Auth />} />
-            <Route path="/register" element={<Auth />} />
-            <Route path="/forgot-password" element={<ForgotPassword />} />
-            <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/auth" element={<Navigate to="/login" replace />} />
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/register" element={<RegisterPage />} />
+            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+            <Route path="/reset-password" element={<ResetPasswordPage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
       </PublicLayout>

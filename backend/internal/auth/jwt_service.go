@@ -44,12 +44,17 @@ func NewJWTService(cfg *config.Config) *JWTService {
 func (s *JWTService) GenerateTokens(user *models.User) (*TokenPair, error) {
 	now := time.Now()
 
+	var companyID string
+	if user.CompanyID != nil {
+		companyID = *user.CompanyID
+	}
+
 	// Access Token (15 минут)
 	accessClaims := Claims{
 		UserID:    user.ID,
 		Email:     user.Email,
 		Role:      string(user.Role),
-		CompanyID: user.CompanyID,
+		CompanyID: companyID,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(now.Add(s.config.AccessTokenTTL)),
 			NotBefore: jwt.NewNumericDate(now),

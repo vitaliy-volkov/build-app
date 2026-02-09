@@ -28,7 +28,7 @@ type User struct {
 	Name         string         `json:"name" gorm:"not null;type:varchar(255)"`
 	PasswordHash string         `json:"-" gorm:"column:password_hash;not null;type:varchar(255)"` // не возвращается в JSON
 	Role         UserRole       `json:"role" gorm:"not null;type:varchar(50)"`
-	CompanyID    string         `json:"company_id" gorm:"type:uuid;default:'00000000-0000-0000-0000-000000000001'"`
+	CompanyID    *string        `json:"company_id" gorm:"type:uuid"`
 	AvatarURL    *string        `json:"avatar_url" gorm:"type:text"`
 	Phone        *string        `json:"phone" gorm:"type:varchar(50)"`
 	IsActive     bool           `json:"is_active" gorm:"default:true"`
