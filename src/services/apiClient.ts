@@ -60,6 +60,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   requestPasswordReset: (email: string) => Promise<boolean>;
   confirmPasswordReset: (data: { email: string; code: string; new_password: string }) => Promise<boolean>;
+  changePassword: (data: { current_password: string; new_password: string }) => Promise<boolean>;
 }
 
 // Base API client
@@ -208,6 +209,13 @@ class ApiClient {
 
   async confirmPasswordReset(data: { email: string; code: string; new_password: string }): Promise<ApiResponse<void>> {
     return this.request<ApiResponse<void>>('/auth/reset-password', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async changePassword(data: { current_password: string; new_password: string }): Promise<ApiResponse<void>> {
+    return this.request<ApiResponse<void>>('/auth/change-password', {
       method: 'POST',
       body: JSON.stringify(data),
     });
@@ -608,6 +616,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const changePassword = async (data: { current_password: string; new_password: string }): Promise<boolean> => {
+    try {
+      const response = await apiClient.changePassword(data);
+      return response.success;
+    } catch (error) {
+      console.error('Change password failed:', error);
+      return false;
+    }
+  };
+
   const value: AuthContextType = {
     user,
     token,
@@ -619,6 +637,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     isAuthenticated: !!user,
     requestPasswordReset,
     confirmPasswordReset,
+    changePassword,
   };
 
   return React.createElement(AuthContext.Provider, { value }, children);

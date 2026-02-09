@@ -2,6 +2,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { useApp } from '../App';
+import { useAuth } from '../services/apiClient';
 import { User, UserRole, UserCompany } from '../types';
 import { 
   User as UserIcon, Camera, Lock, MapPin, Phone, Mail, 
@@ -377,12 +378,43 @@ const StatBox = ({ label, value, subtext }: any) => (
 );
 
 const ProfileSettingsForm = ({ currentUser, updateUser }: { currentUser: User, updateUser: (u: User) => void }) => {
+    const { changePassword } = useAuth();
     const [form, setForm] = useState({ ...currentUser });
     const [skillsInput, setSkillsInput] = useState('');
+    const [passwordForm, setPasswordForm] = useState({ current_password: '', new_password: '', repeat_password: '' });
 
-    const handleSave = () => {
-        updateUser(form);
+    const handleSave = async () => {
+        await updateUser(form);
         alert('Профиль обновлен!');
+    };
+
+    const handleChangePassword = async () => {
+        if (!passwordForm.current_password || !passwordForm.new_password) {
+            alert('Заполните текущий и новый пароль.');
+            return;
+        }
+
+        if (passwordForm.new_password.length < 8) {
+            alert('Новый пароль должен быть не менее 8 символов.');
+            return;
+        }
+
+        if (passwordForm.new_password !== passwordForm.repeat_password) {
+            alert('Новый пароль и подтверждение не совпадают.');
+            return;
+        }
+
+        const success = await changePassword({
+            current_password: passwordForm.current_password,
+            new_password: passwordForm.new_password,
+        });
+
+        if (success) {
+            setPasswordForm({ current_password: '', new_password: '', repeat_password: '' });
+            alert('Пароль успешно изменен.');
+        } else {
+            alert('Не удалось изменить пароль. Проверьте текущий пароль и требования к новому.');
+        }
     };
 
     const handleAddSkill = () => {
@@ -431,6 +463,20 @@ const ProfileSettingsForm = ({ currentUser, updateUser }: { currentUser: User, u
                     </div>
                 </div>
             </div>
+            <div className="border-t border-slate-100 pt-6">
+                <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center"><Lock size={18} className="mr-2"/>Изменить пароль</h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <input type="password" value={passwordForm.current_password} onChange={e => setPasswordForm({...passwordForm, current_password: e.target.value})} className="w-full p-2 border rounded-lg" placeholder="Текущий пароль" />
+                    <input type="password" value={passwordForm.new_password} onChange={e => setPasswordForm({...passwordForm, new_password: e.target.value})} className="w-full p-2 border rounded-lg" placeholder="Новый пароль" />
+                    <input type="password" value={passwordForm.repeat_password} onChange={e => setPasswordForm({...passwordForm, repeat_password: e.target.value})} className="w-full p-2 border rounded-lg" placeholder="Повторите новый пароль" />
+                </div>
+                <div className="pt-4 flex justify-end">
+                    <button onClick={handleChangePassword} className="bg-slate-800 text-white px-6 py-2 rounded-lg font-bold hover:bg-black flex items-center">
+                        <Key size={18} className="mr-2"/> Обновить пароль
+                    </button>
+                </div>
+            </div>
+
             <div className="pt-4 flex justify-end">
                 <button onClick={handleSave} className="bg-blue-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-blue-700 flex items-center">
                     <Save size={18} className="mr-2"/> Сохранить изменения
