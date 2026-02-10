@@ -710,16 +710,16 @@ const QuickApplicationForm = () => {
     };
 
     return (
-        <form onSubmit={handleSubmit} className="flex w-full max-w-md bg-white p-1.5 rounded-full border border-slate-200 shadow-lg focus-within:ring-2 focus-within:ring-blue-500 transition-all">
+        <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-2 sm:gap-0 w-full max-w-md bg-white p-1.5 rounded-2xl sm:rounded-full border border-slate-200 shadow-lg focus-within:ring-2 focus-within:ring-blue-500 transition-all">
             <input 
                 type="tel" 
                 placeholder="Введите ваш телефон" 
-                className="flex-1 bg-transparent px-4 py-2 outline-none text-slate-700 placeholder:text-slate-400"
+                className="w-full flex-1 bg-transparent px-4 py-2.5 outline-none text-slate-700 placeholder:text-slate-400"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 required
             />
-            <button type="submit" className="bg-blue-600 text-white px-6 py-2 rounded-full font-bold text-sm hover:bg-blue-700 transition-colors">
+            <button type="submit" className="w-full sm:w-auto bg-blue-600 text-white px-6 py-2.5 rounded-xl sm:rounded-full font-bold text-sm hover:bg-blue-700 transition-colors">
                 Попробовать
             </button>
         </form>
