@@ -2,6 +2,7 @@ package auth
 
 import (
 	"net/http"
+	"strings"
 	"time"
 
 	"stroy-control-backend/internal/email"
@@ -65,6 +66,8 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		return
 	}
 
+	req.Email = strings.TrimSpace(strings.ToLower(req.Email))
+
 	var user models.User
 	if err := h.db.Where("email = ?", req.Email).First(&user).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
@@ -111,6 +114,8 @@ func (h *AuthHandler) Register(c *gin.Context) {
 		return
 	}
 
+	req.Email = strings.TrimSpace(strings.ToLower(req.Email))
+
 	if !models.IsValidPassword(req.Password) {
 		c.JSON(http.StatusBadRequest, models.NewErrorResponse(
 			"Password too weak",
@@ -121,8 +126,11 @@ func (h *AuthHandler) Register(c *gin.Context) {
 	}
 
 	var existingUser models.User
-	if err := h.db.Where("email = ?", req.Email).First(&existingUser).Error; err != gorm.ErrRecordNotFound {
+	if err := h.db.Where("email = ?", req.Email).First(&existingUser).Error; err == nil {
 		c.JSON(http.StatusConflict, models.NewErrorResponse("Email already registered", http.StatusConflict))
+		return
+	} else if err != gorm.ErrRecordNotFound {
+		c.JSON(http.StatusInternalServerError, models.NewErrorResponse("Database error", http.StatusInternalServerError))
 		return
 	}
 

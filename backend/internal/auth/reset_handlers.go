@@ -3,6 +3,7 @@ package auth
 import (
 	"log"
 	"net/http"
+	"strings"
 	"time"
 
 	"stroy-control-backend/internal/models"
@@ -30,6 +31,8 @@ func (h *AuthHandler) RequestPasswordReset(c *gin.Context) {
 		return
 	}
 
+	req.Email = strings.TrimSpace(strings.ToLower(req.Email))
+
 	var user models.User
 	if err := h.db.Where("email = ?", req.Email).First(&user).Error; err != nil {
 		// Do not reveal user existence
@@ -46,7 +49,7 @@ func (h *AuthHandler) RequestPasswordReset(c *gin.Context) {
 
 	// Save to DB (expires in 15 minutes)
 	expires := time.Now().Add(15 * time.Minute)
-	
+
 	// Update user with raw SQL or map to avoid strict struct constraints if fields are missing in struct
 	if err := h.db.Model(&user).Updates(map[string]interface{}{
 		"reset_token":            code,
@@ -76,6 +79,9 @@ func (h *AuthHandler) ConfirmPasswordReset(c *gin.Context) {
 		return
 	}
 
+	req.Email = strings.TrimSpace(strings.ToLower(req.Email))
+	req.Code = strings.TrimSpace(req.Code)
+
 	var user models.User
 	if err := h.db.Where("email = ?", req.Email).First(&user).Error; err != nil {
 		c.JSON(http.StatusBadRequest, models.NewErrorResponse("Invalid request", http.StatusBadRequest))
@@ -83,11 +89,11 @@ func (h *AuthHandler) ConfirmPasswordReset(c *gin.Context) {
 	}
 
 	// Verify Code and Expiration
-	// Note: reset_token field needs to be added to User struct model for GORM access, 
+	// Note: reset_token field needs to be added to User struct model for GORM access,
 	// or we use raw SQL/map. Let's use map/scan for safety if struct isn't updated yet.
 	var storedToken string
 	var expiresAt time.Time
-	
+
 	// Using Raw query to ensure we get the values even if model struct isn't fully synced yet in runtime
 	row := h.db.Model(&models.User{}).Where("id = ?", user.ID).Select("reset_token, reset_token_expires_at").Row()
 	if err := row.Scan(&storedToken, &expiresAt); err != nil {
