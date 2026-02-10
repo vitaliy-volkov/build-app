@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { LayoutDashboard, Menu, X, Sparkles, Mail, Phone } from 'lucide-react';
 
@@ -14,16 +14,20 @@ export const PublicLayout: React.FC<PublicLayoutProps> = ({ children }) => {
 
   const isActive = (path: string) => location.pathname === path;
 
+  useEffect(() => {
+    setMobileMenuOpen(false);
+  }, [location.pathname]);
+
   return (
     <div className="min-h-screen bg-white font-sans text-slate-900 selection:bg-blue-100 selection:text-blue-900 overflow-x-hidden flex flex-col">
       {/* --- LIQUID GLASS HEADER --- */}
       <header className="fixed w-full top-0 z-50 transition-all duration-300 bg-white/80 backdrop-blur-lg border-b border-white/20 shadow-[0_4px_30px_rgba(0,0,0,0.03)] supports-[backdrop-filter]:bg-white/60">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 md:h-20 flex items-center justify-between">
           <div className="flex items-center space-x-2 text-blue-600 cursor-pointer" onClick={() => navigate('/')}>
             <div className="bg-blue-600 text-white p-1.5 rounded-lg shadow-lg shadow-blue-500/30">
                 <LayoutDashboard size={20} />
             </div>
-            <span className="text-xl font-bold text-slate-900 tracking-tight">Строй-Контроль</span>
+            <span className="text-base sm:text-xl font-bold text-slate-900 tracking-tight">Строй-Контроль</span>
           </div>
           
           <div className="hidden md:flex items-center space-x-8 text-sm font-medium text-slate-700">
@@ -58,7 +62,7 @@ export const PublicLayout: React.FC<PublicLayoutProps> = ({ children }) => {
 
         {/* Mobile Menu */}
         {mobileMenuOpen && (
-           <div className="md:hidden absolute top-20 left-0 w-full bg-white border-b border-slate-100 p-4 flex flex-col space-y-4 shadow-xl animate-in slide-in-from-top-5">
+           <div className="md:hidden absolute top-16 left-0 w-full max-h-[calc(100vh-4rem)] overflow-y-auto bg-white border-b border-slate-100 p-4 flex flex-col space-y-4 shadow-xl animate-in slide-in-from-top-5">
               <Link to="/estimates-promo" className="text-slate-700 font-medium" onClick={() => setMobileMenuOpen(false)}>Сметы</Link>
               <Link to="/finance-promo" className="text-slate-700 font-medium" onClick={() => setMobileMenuOpen(false)}>Финансы</Link>
               <Link to="/ai-promo" className="text-purple-600 font-bold flex items-center" onClick={() => setMobileMenuOpen(false)}><Sparkles size={14} className="mr-2"/> AI Модуль</Link>
