@@ -9,10 +9,6 @@ export default defineConfig(({ mode }) => {
         port: 3000,
         host: '0.0.0.0',
         proxy: {
-          '/auth': 'http://localhost:8080',
-          '/projects': 'http://localhost:8080',
-          '/companies': 'http://localhost:8080',
-          '/estimates': 'http://localhost:8080',
           '/api': 'http://localhost:8080',
           '/ai': 'http://localhost:8080',
           '/health': 'http://localhost:8080',
