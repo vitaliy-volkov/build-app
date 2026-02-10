@@ -65,7 +65,7 @@ export const AIAssistant = () => {
       <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-3 flex justify-between items-center cursor-pointer" onClick={() => setIsMinimized(!isMinimized)}>
          <div className="flex items-center text-white">
             <Sparkles size={18} className="mr-2" />
-            <span className="font-bold text-sm">Строй-Контроль AI</span>
+            <span className="font-bold text-sm">Build App AI</span>
          </div>
          <div className="flex space-x-2 text-white/80">
             <button onClick={(e) => { e.stopPropagation(); setIsMinimized(!isMinimized); }}>

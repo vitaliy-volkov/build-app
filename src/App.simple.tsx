@@ -6,7 +6,7 @@ const App: React.FC = () => {
   return (
     <HashRouter>
       <div style={{ padding: '20px' }}>
-        <h1>Строй-Контроль</h1>
+        <h1>Build App AI</h1>
         <p>Приложение загружается успешно!</p>
         <Routes>
           <Route path="/" element={<div>Главная страница</div>} />

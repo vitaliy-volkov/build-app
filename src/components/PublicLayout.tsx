@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { LayoutDashboard, Menu, X, Sparkles, Mail, Phone } from 'lucide-react';
 
@@ -14,16 +14,20 @@ export const PublicLayout: React.FC<PublicLayoutProps> = ({ children }) => {
 
   const isActive = (path: string) => location.pathname === path;
 
+  useEffect(() => {
+    setMobileMenuOpen(false);
+  }, [location.pathname]);
+
   return (
     <div className="min-h-screen bg-white font-sans text-slate-900 selection:bg-blue-100 selection:text-blue-900 overflow-x-hidden flex flex-col">
       {/* --- LIQUID GLASS HEADER --- */}
       <header className="fixed w-full top-0 z-50 transition-all duration-300 bg-white/80 backdrop-blur-lg border-b border-white/20 shadow-[0_4px_30px_rgba(0,0,0,0.03)] supports-[backdrop-filter]:bg-white/60">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 md:h-20 flex items-center justify-between">
           <div className="flex items-center space-x-2 text-blue-600 cursor-pointer" onClick={() => navigate('/')}>
             <div className="bg-blue-600 text-white p-1.5 rounded-lg shadow-lg shadow-blue-500/30">
                 <LayoutDashboard size={20} />
             </div>
-            <span className="text-xl font-bold text-slate-900 tracking-tight">Строй-Контроль</span>
+            <span className="text-base sm:text-xl font-bold text-slate-900 tracking-tight">Build App AI</span>
           </div>
           
           <div className="hidden md:flex items-center space-x-8 text-sm font-medium text-slate-700">
@@ -58,7 +62,7 @@ export const PublicLayout: React.FC<PublicLayoutProps> = ({ children }) => {
 
         {/* Mobile Menu */}
         {mobileMenuOpen && (
-           <div className="md:hidden absolute top-20 left-0 w-full bg-white border-b border-slate-100 p-4 flex flex-col space-y-4 shadow-xl animate-in slide-in-from-top-5">
+           <div className="md:hidden absolute top-16 left-0 w-full max-h-[calc(100vh-4rem)] overflow-y-auto bg-white border-b border-slate-100 p-4 flex flex-col space-y-4 shadow-xl animate-in slide-in-from-top-5">
               <Link to="/estimates-promo" className="text-slate-700 font-medium" onClick={() => setMobileMenuOpen(false)}>Сметы</Link>
               <Link to="/finance-promo" className="text-slate-700 font-medium" onClick={() => setMobileMenuOpen(false)}>Финансы</Link>
               <Link to="/ai-promo" className="text-purple-600 font-bold flex items-center" onClick={() => setMobileMenuOpen(false)}><Sparkles size={14} className="mr-2"/> AI Модуль</Link>
@@ -84,7 +88,7 @@ export const PublicLayout: React.FC<PublicLayoutProps> = ({ children }) => {
                <div className="col-span-1 md:col-span-1">
                   <div className="flex items-center space-x-2 text-blue-600 mb-4">
                      <LayoutDashboard size={24} />
-                     <span className="text-xl font-bold text-slate-900">Строй-Контроль</span>
+                     <span className="text-xl font-bold text-slate-900">Build App AI</span>
                   </div>
                   <p className="text-slate-500 text-sm">
                      Интеллектуальная система управления строительством для тех, кто ценит время и деньги.
@@ -110,14 +114,14 @@ export const PublicLayout: React.FC<PublicLayoutProps> = ({ children }) => {
                <div>
                   <h4 className="font-bold text-slate-900 mb-4">Контакты</h4>
                   <ul className="space-y-2 text-sm text-slate-500">
-                     <li className="flex items-center"><Mail size={14} className="mr-2 text-slate-400"/> help@stroy-control.ru</li>
-                     <li className="flex items-center"><Phone size={14} className="mr-2 text-slate-400"/> +7 (999) 000-00-00</li>
-                     <li>Москва, Пресненская наб., 12</li>
+                     <li className="flex items-center"><Mail size={14} className="mr-2 text-slate-400"/> help@build-app.ru</li>
+                     <li className="flex items-center"><Phone size={14} className="mr-2 text-slate-400"/> +7 (929) 20-20-33</li>
+                     <li>г. Екатеринбург, ул. Розы Люксембург 22</li>
                   </ul>
                </div>
             </div>
             <div className="border-t border-slate-100 pt-8 flex flex-col md:flex-row justify-between items-center text-sm text-slate-400">
-               <p>© 2024 Строй-Контроль. Все права защищены.</p>
+               <p>© 2024 Build App AI. Все права защищены.</p>
                <div className="flex space-x-6 mt-4 md:mt-0">
                   <a href="#" className="hover:text-slate-600">Политика конфиденциальности</a>
                   <a href="#" className="hover:text-slate-600">Оферта</a>

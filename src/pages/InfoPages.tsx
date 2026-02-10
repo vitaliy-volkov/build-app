@@ -5,7 +5,7 @@ import { Users, MapPin, Mail, Phone, Building2, Award, Globe } from 'lucide-reac
 export const About = () => (
     <div className="min-h-screen bg-white pt-24 px-4">
         <div className="max-w-4xl mx-auto">
-            <h1 className="text-4xl font-bold text-slate-900 mb-8 text-center">О компании Строй-Контроль</h1>
+            <h1 className="text-4xl font-bold text-slate-900 mb-8 text-center">О компании Build App AI</h1>
             <p className="text-xl text-slate-500 text-center mb-16 leading-relaxed">
                 Мы — команда строителей и IT-инженеров, которые решили оцифровать самую консервативную отрасль.
                 Наша миссия — сделать стройку прозрачной, предсказуемой и прибыльной.
@@ -22,7 +22,7 @@ export const About = () => (
                         чеки терялись, а кассовые разрывы стали нормой. Мы не нашли удобного решения на рынке и создали своё.
                     </p>
                     <p className="text-slate-600">
-                        Сегодня Строй-Контроль помогает тысячам компаний в СНГ экономить миллионы рублей ежемесячно, 
+                        Сегодня Build App AI помогает тысячам компаний в СНГ экономить миллионы рублей ежемесячно, 
                         предотвращая ошибки и воровство.
                     </p>
                 </div>
@@ -59,20 +59,20 @@ export const Contacts = () => (
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200">
-                    <h2 className="text-2xl font-bold mb-6">Офис в Москве</h2>
+                    <h2 className="text-2xl font-bold mb-6">Офис в Екатеринбурге</h2>
                     <div className="space-y-6">
                         <div className="flex items-start">
                             <MapPin className="text-blue-600 mr-4 mt-1" size={24}/>
                             <div>
                                 <h4 className="font-bold text-slate-800">Адрес</h4>
-                                <p className="text-slate-600">123112, г. Москва, Пресненская набережная, д. 12, Башня Федерация, офис 42</p>
+                                <p className="text-slate-600">г. Екатеринбург, ул. Розы Люксембург 22</p>
                             </div>
                         </div>
                         <div className="flex items-start">
                             <Phone className="text-blue-600 mr-4 mt-1" size={24}/>
                             <div>
                                 <h4 className="font-bold text-slate-800">Телефон</h4>
-                                <p className="text-slate-600">+7 (999) 000-00-00 (Многоканальный)</p>
+                                <p className="text-slate-600">+7 (929) 20-20-33</p>
                                 <p className="text-slate-400 text-sm">Пн-Пт с 9:00 до 19:00</p>
                             </div>
                         </div>
@@ -80,8 +80,7 @@ export const Contacts = () => (
                             <Mail className="text-blue-600 mr-4 mt-1" size={24}/>
                             <div>
                                 <h4 className="font-bold text-slate-800">Email</h4>
-                                <p className="text-slate-600">info@stroy-control.ru</p>
-                                <p className="text-slate-600">support@stroy-control.ru</p>
+                                <p className="text-slate-600">help@build-app.ru</p>
                             </div>
                         </div>
                         <div className="flex items-start">

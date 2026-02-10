@@ -1,7 +1,7 @@
 export const runtimeConfig = {
-  // API URL: Must be provided in environment variables. 
-  // In development, it can fall back to relative path (proxy), but in production it should be set.
-  apiUrl: import.meta.env.VITE_API_URL || '',
+  // API URL: v1 base path by default for consistent frontend/backend contract.
+  // Can be overridden for production deployments via VITE_API_URL.
+  apiUrl: import.meta.env.VITE_API_URL || '/api/v1',
   
   // App Environment
   appEnv: import.meta.env.VITE_APP_ENV || 'development',

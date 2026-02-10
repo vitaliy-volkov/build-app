@@ -74,7 +74,7 @@ export const CreateCompany = () => {
                         <Building2 size={32} />
                     </div>
                     <div>
-                        <h1 className="text-2xl font-bold text-slate-900">Добро пожаловать в Строй-Контроль</h1>
+                        <h1 className="text-2xl font-bold text-slate-900">Добро пожаловать в Build App AI</h1>
                         <p className="text-slate-500">Давайте настроим ваше рабочее пространство. Это займет пару минут.</p>
                     </div>
                 </div>

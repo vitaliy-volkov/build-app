@@ -204,12 +204,12 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
   }, [location]);
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col md:flex-row">
+    <div className="min-h-screen bg-slate-50 flex flex-col md:flex-row overflow-x-hidden">
       {/* Mobile Header (Sticky) */}
-      <div className="md:hidden bg-white p-4 flex justify-between items-center shadow-sm z-40 sticky top-0">
-        <div className="flex items-center space-x-2 font-bold text-blue-700 text-xl">
+      <div className="md:hidden bg-white px-3 py-3 flex justify-between items-center shadow-sm z-40 sticky top-0">
+        <div className="flex items-center space-x-2 font-bold text-blue-700 text-base sm:text-lg">
           <LayoutDashboard />
-          <span>Строй-Контроль</span>
+          <span>Build App AI</span>
         </div>
         <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-2 text-slate-600">
            {sidebarOpen ? <X /> : <Menu />}
@@ -218,7 +218,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
 
       {/* Sidebar */}
       <aside className={clsx(
-        "fixed md:sticky top-0 left-0 h-screen bg-white border-r border-slate-200 z-50 md:z-30 transform transition-all duration-300 ease-in-out flex flex-col shadow-[4px_0_24px_rgba(0,0,0,0.02)]",
+        "fixed md:sticky top-16 md:top-0 left-0 h-[calc(100vh-4rem)] md:h-screen w-80 max-w-[85vw] md:w-auto bg-white border-r border-slate-200 z-50 md:z-30 transform transition-all duration-300 ease-in-out flex flex-col shadow-[4px_0_24px_rgba(0,0,0,0.02)]",
         sidebarOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0",
         sidebarCollapsed ? "md:w-20" : "md:w-64"
       )}>
@@ -229,7 +229,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                 <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white flex-shrink-0 shadow-sm">
                   <LayoutDashboard size={18} />
                 </div>
-                <span className="text-xl font-bold text-slate-800 truncate">Строй-Контроль</span>
+                <span className="text-xl font-bold text-slate-800 truncate">Build App AI</span>
              </div>
            ) : (
               <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white flex-shrink-0 shadow-sm">
@@ -293,9 +293,9 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
       </aside>
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col min-w-0 h-screen">
+      <div className="flex-1 flex flex-col min-w-0 md:h-screen min-h-0">
         {/* Top Header */}
-        <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-4 md:px-6 z-20 sticky top-0 shadow-sm">
+        <header className="hidden md:flex h-16 bg-white border-b border-slate-200 items-center justify-between px-4 md:px-6 z-20 sticky top-0 shadow-sm">
             <div className="flex items-center flex-1">
                 {/* Global Search */}
                 <GlobalSearch />
@@ -425,7 +425,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
 
         {/* Main Content Scroll Area */}
         <main className="flex-1 overflow-hidden bg-slate-50 relative">
-            <div className="h-full overflow-y-auto p-4 md:p-8 custom-scrollbar">
+            <div className="h-full overflow-y-auto p-3 sm:p-4 md:p-8 custom-scrollbar">
                 {children}
             </div>
         </main>

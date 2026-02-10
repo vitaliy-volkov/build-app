@@ -12,7 +12,7 @@ const API_BASE_URL = runtimeConfig.apiUrl;
 
 // Types for API responses
 interface ApiResponse<T> {
-  success: boolean;
+  success?: boolean;
   data?: T;
   message?: string;
   error?: string;
@@ -591,7 +591,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const requestPasswordReset = async (email: string): Promise<boolean> => {
     try {
       const response = await apiClient.requestPasswordReset(email);
-      return response.success;
+      // Backend reset endpoints may return only { message } on 200 for security reasons.
+      return response.success ?? true;
     } catch (error) {
       console.error('Password reset request failed:', error);
       return false;
@@ -601,7 +602,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const confirmPasswordReset = async (data: { email: string; code: string; new_password: string }): Promise<boolean> => {
     try {
       const response = await apiClient.confirmPasswordReset(data);
-      return response.success;
+      // Backend may return { message } on success without explicit success flag.
+      return response.success ?? true;
     } catch (error) {
       console.error('Password reset confirmation failed:', error);
       return false;
