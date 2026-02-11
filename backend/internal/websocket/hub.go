@@ -100,12 +100,17 @@ func (h *WebSocketHub) ServeWebSocket(c *gin.Context) {
 		return
 	}
 
+	companyID := ""
+	if user.CompanyID != nil {
+		companyID = *user.CompanyID
+	}
+
 	// Create connection
 	conn := &Connection{
 		ws:        ws,
 		send:      make(chan []byte, 256),
 		userID:    user.ID,
-		companyID: user.CompanyID,
+		companyID: companyID,
 		hub:       h,
 	}
 
@@ -125,11 +130,13 @@ func (h *WebSocketHub) ServeWebSocket(c *gin.Context) {
 	})
 
 	// Broadcast user online status
-	h.broadcastToCompany(user.CompanyID, Message{
-		Type:      "user_status",
-		Data:      gin.H{"user_id": user.ID, "status": "online"},
-		Timestamp: time.Now(),
-	})
+	if companyID != "" {
+		h.broadcastToCompany(companyID, Message{
+			Type:      "user_status",
+			Data:      gin.H{"user_id": user.ID, "status": "online"},
+			Timestamp: time.Now(),
+		})
+	}
 }
 
 // register adds a connection to the hub

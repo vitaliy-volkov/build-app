@@ -9,18 +9,22 @@ import (
 
 // Router handles WebSocket connections
 type Router struct {
-	hub *WebSocketHub
+	hub        *WebSocketHub
+	middleware *auth.AuthMiddleware
 }
 
 // NewRouter creates a new WebSocket router
 func NewRouter(authMiddleware *auth.AuthMiddleware, redisService *redis.RedisService) *Router {
 	return &Router{
-		hub: NewWebSocketHub(authMiddleware, redisService),
+		hub:        NewWebSocketHub(authMiddleware, redisService),
+		middleware: authMiddleware,
 	}
 }
 
 // RegisterRoutes sets up WebSocket routes
 func (r *Router) RegisterRoutes(engine *gin.Engine) {
-	// WebSocket endpoint
-	engine.GET("/ws", r.hub.ServeWebSocket)
+	// WebSocket endpoint (protected)
+	wsGroup := engine.Group("")
+	wsGroup.Use(r.middleware.Protected())
+	wsGroup.GET("/ws", r.hub.ServeWebSocket)
 }

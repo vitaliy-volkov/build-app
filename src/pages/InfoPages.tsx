@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Users, MapPin, Mail, Phone, Building2, Award, Globe } from 'lucide-react';
+import { Users, MapPin, Mail, Phone, Award, Globe } from 'lucide-react';
 
 export const About = () => (
     <div className="min-h-screen bg-white pt-24 px-4">
@@ -81,14 +81,6 @@ export const Contacts = () => (
                             <div>
                                 <h4 className="font-bold text-slate-800">Email</h4>
                                 <p className="text-slate-600">help@build-app.ru</p>
-                            </div>
-                        </div>
-                        <div className="flex items-start">
-                            <Building2 className="text-blue-600 mr-4 mt-1" size={24}/>
-                            <div>
-                                <h4 className="font-bold text-slate-800">Реквизиты</h4>
-                                <p className="text-slate-600 text-sm">ООО "СТРОЙ ТЕХНОЛОГИИ"</p>
-                                <p className="text-slate-600 text-sm">ИНН 7700000000 / КПП 770101001</p>
                             </div>
                         </div>
                     </div>

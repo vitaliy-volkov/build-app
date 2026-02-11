@@ -16,11 +16,14 @@ import (
 	"stroy-control-backend/internal/company"
 	"stroy-control-backend/internal/config"
 	"stroy-control-backend/internal/email"
+	"stroy-control-backend/internal/fileupload"
 	"stroy-control-backend/internal/finance"
 	"stroy-control-backend/internal/middleware"
+	"stroy-control-backend/internal/payment"
 	"stroy-control-backend/internal/project"
 	"stroy-control-backend/internal/redis"
 	"stroy-control-backend/internal/services"
+	"stroy-control-backend/internal/websocket"
 
 	"github.com/gin-gonic/gin"
 )
@@ -75,6 +78,15 @@ func main() {
 	// Initialize AI Router
 	aiRouter := ai.NewRouterGroup(aiService, authRouter.GetMiddleware().Protected())
 
+	// Initialize Payment Router
+	paymentRouter := payment.NewRouterGroup(db.GetDB(), redisService, authRouter.GetMiddleware())
+
+	// Initialize File Upload Router
+	fileUploadRouter := fileupload.NewRouterGroup(db.GetDB(), redisService, authRouter.GetMiddleware())
+
+	// Initialize WebSocket Router
+	websocketRouter := websocket.NewRouter(authRouter.GetMiddleware(), redisService)
+
 	// Set up Gin router with middleware
 	r := gin.Default()
 
@@ -120,6 +132,15 @@ func main() {
 
 	// Register AI routes
 	aiRouter.RegisterRoutes(r)
+
+	// Register payment routes
+	paymentRouter.RegisterRoutes(r)
+
+	// Register file upload routes
+	fileUploadRouter.RegisterRoutes(r)
+
+	// Register websocket routes
+	websocketRouter.RegisterRoutes(r)
 
 	// Initialize Swagger documentation
 	docs.InitSwagger(r)

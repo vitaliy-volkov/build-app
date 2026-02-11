@@ -24,18 +24,18 @@
 **Оценка:** 3–5 рабочих дней.
 
 ### A1. Инвентаризация API
-- [ ] Собрать фактический список backend endpoint'ов (auth, company, projects, finance, ai, health).
-- [ ] Собрать список endpoint'ов, которые вызывает frontend.
-- [ ] Составить mapping «Frontend call -> Backend route».
+- [x] Собрать фактический список backend endpoint'ов (auth, company, projects, finance, ai, health).
+- [x] Собрать список endpoint'ов, которые вызывает frontend.
+- [x] Составить mapping «Frontend call -> Backend route».
 
 **Definition of Done:**
 - Единая таблица маршрутов в docs.
 - Выявлены все рассинхроны (префикс, имена, payload/response).
 
 ### A2. Нормализация префиксов и базового URL
-- [ ] Зафиксировать единый префикс: `/api/v1` (кроме `/health` и `/auth`, если оставляем отдельно).
-- [ ] Привести `runtimeConfig.apiUrl` и `apiClient` к единой схеме.
-- [ ] Актуализировать Vite proxy для локальной разработки.
+- [x] Зафиксировать единый префикс: `/api/v1` (кроме `/health` и `/auth`, если оставляем отдельно).
+- [x] Привести `runtimeConfig.apiUrl` и `apiClient` к единой схеме.
+- [x] Актуализировать Vite proxy для локальной разработки.
 
 **Definition of Done:**
 - Frontend в dev и prod указывает в один понятный API base.
@@ -68,8 +68,8 @@
 **Оценка:** 1–2 недели.
 
 ### B1. Подключение неиспользуемых модулей
-- [ ] Подключить в `main.go` модули, уже присутствующие в коде (payment/fileupload/websocket — по приоритету).
-- [ ] Проверить middleware/авторизацию/namespace.
+- [x] Подключить в `main.go` модули, уже присутствующие в коде (payment/fileupload/websocket — по приоритету).
+- [x] Проверить middleware/авторизацию/namespace.
 
 ### B2. CRUD-покрытие ключевых сущностей
 - [ ] Доделать/проверить endpoints для estimates.
