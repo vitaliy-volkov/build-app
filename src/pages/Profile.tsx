@@ -404,16 +404,16 @@ const ProfileSettingsForm = ({ currentUser, updateUser }: { currentUser: User, u
             return;
         }
 
-        const success = await changePassword({
-            current_password: passwordForm.current_password,
-            new_password: passwordForm.new_password,
-        });
+        try {
+            await changePassword({
+                current_password: passwordForm.current_password,
+                new_password: passwordForm.new_password,
+            });
 
-        if (success) {
             setPasswordForm({ current_password: '', new_password: '', repeat_password: '' });
             alert('Пароль успешно изменен.');
-        } else {
-            alert('Не удалось изменить пароль. Проверьте текущий пароль и требования к новому.');
+        } catch (error) {
+            alert(error instanceof Error ? error.message : 'Не удалось изменить пароль. Проверьте текущий пароль и требования к новому.');
         }
     };
 

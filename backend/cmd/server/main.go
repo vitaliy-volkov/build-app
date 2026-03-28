@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 	"time"
 
@@ -38,6 +39,23 @@ func main() {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
 	defer db.Close()
+
+	migrationDir := os.Getenv("MIGRATIONS_DIR")
+	if migrationDir == "" {
+		migrationDir = filepath.Join(".", "migrations")
+	}
+
+	migrateOnly := len(os.Args) > 1 && os.Args[1] == "migrate"
+	if migrateOnly || os.Getenv("RUN_DB_MIGRATIONS") == "true" {
+		if err := config.RunMigrations(db.GetDB(), migrationDir); err != nil {
+			log.Fatalf("Failed to run migrations: %v", err)
+		}
+
+		if migrateOnly {
+			log.Println("Database migrations completed successfully")
+			return
+		}
+	}
 
 	// Initialize Redis Service
 	redisService := redis.NewRedisService(cfg)

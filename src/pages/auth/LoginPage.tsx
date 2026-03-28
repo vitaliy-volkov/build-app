@@ -40,7 +40,7 @@ export const LoginPage = () => {
       }
     } catch (err: any) {
       console.error('Login error:', err);
-      setError('Произошла ошибка при входе. Попробуйте позже.');
+      setError(err instanceof Error ? err.message : 'Произошла ошибка при входе. Попробуйте позже.');
     } finally {
       setIsLoading(false);
     }

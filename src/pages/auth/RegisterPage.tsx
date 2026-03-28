@@ -65,7 +65,7 @@ export const RegisterPage = () => {
       }
     } catch (err: any) {
       console.error('Registration error:', err);
-      setError('Произошла ошибка при регистрации. Попробуйте позже.');
+      setError(err instanceof Error ? err.message : 'Произошла ошибка при регистрации. Попробуйте позже.');
     } finally {
       setIsLoading(false);
     }

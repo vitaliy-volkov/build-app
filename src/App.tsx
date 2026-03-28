@@ -44,7 +44,7 @@ import { About, Contacts } from './pages/InfoPages';
 import { Blog, BlogPost } from './pages/Blog';
 import { v4 as uuidv4 } from 'uuid';
 import { ArrowRight } from 'lucide-react';
-import { apiClient, AuthProvider, useAuth } from './services/apiClient';
+import { apiClient, useAuth } from './services/apiClient';
 import { AppProviders } from './providers/AppProviders';
 
 // --- State Management (Context) ---
@@ -255,7 +255,7 @@ const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   });
 
   // Computed values
-  const isLoading = loading.global || loading.projects || loading.users || loading.estimates || loading.counterparties || loading.payments;
+  const isLoading = auth.isLoading || loading.global || loading.projects || loading.users || loading.estimates || loading.counterparties || loading.payments;
   const hasError = !!(errors.global || errors.projects || errors.users || errors.estimates || errors.counterparties || errors.payments);
 
   // Initialize data function
@@ -266,10 +266,7 @@ const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     try {
       if (!isAuthenticated) return;
 
-      const [projectsRes, counterpartiesRes] = await Promise.all([
-        apiClient.getProjects({ limit: 1000 }),
-        apiClient.getCounterparties({ limit: 1000 })
-      ]);
+      const projectsRes = await apiClient.getProjects({ limit: 1000 });
 
       if (projectsRes.success && projectsRes.data) {
         setProjectsState(projectsRes.data.data);
@@ -277,11 +274,9 @@ const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
         throw new Error(projectsRes.error || 'Failed to load projects');
       }
 
-      if (counterpartiesRes.success && counterpartiesRes.data) {
-        setCounterpartiesState(counterpartiesRes.data.data);
-      } else {
-        throw new Error(counterpartiesRes.error || 'Failed to load counterparties');
-      }
+      // Counterparties API is not implemented on the backend yet.
+      // Use demo data so the authenticated shell remains usable after login.
+      setCounterpartiesState(MOCK_COUNTERPARTIES);
       
     } catch (error) {
       console.error('Failed to initialize data:', error);
@@ -295,7 +290,7 @@ const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     if (isAuthenticated) {
         initializeData();
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, currentUser?.company_id]);
 
   // Sync Company Settings and Users from Current User
   useEffect(() => {

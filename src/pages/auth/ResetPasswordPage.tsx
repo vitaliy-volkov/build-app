@@ -49,7 +49,7 @@ export const ResetPasswordPage = () => {
         setError('Неверный код или срок действия истек.');
       }
     } catch (err: any) {
-      setError('Ошибка сброса пароля.');
+      setError(err instanceof Error ? err.message : 'Ошибка сброса пароля.');
     } finally {
       setIsLoading(false);
     }

@@ -6,8 +6,8 @@ server:
 database:
   host: localhost
   port: 5432
-  user: user
-  password: password
+  user: stroy_user
+  password: stroy_password
   dbname: stroy_control
   ssl_mode: disable
 

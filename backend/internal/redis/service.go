@@ -19,7 +19,7 @@ type RedisService struct {
 // NewRedisService создает новый экземпляр Redis сервиса
 func NewRedisService(cfg *config.Config) *RedisService {
 	client := redis.NewClient(&redis.Options{
-		Addr:     cfg.Redis.Host,
+		Addr:     fmt.Sprintf("%s:%d", cfg.Redis.Host, cfg.Redis.Port),
 		Password: cfg.Redis.Password,
 		DB:       cfg.Redis.DB,
 	})

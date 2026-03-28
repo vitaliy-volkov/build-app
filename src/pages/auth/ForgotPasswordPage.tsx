@@ -41,7 +41,7 @@ export const ForgotPasswordPage = () => {
         setError('Произошла ошибка. Попробуйте позже.');
       }
     } catch (err: any) {
-      setError('Ошибка соединения с сервером.');
+      setError(err instanceof Error ? err.message : 'Ошибка соединения с сервером.');
     } finally {
       setIsLoading(false);
     }

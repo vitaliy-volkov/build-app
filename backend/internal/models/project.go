@@ -70,7 +70,7 @@ type ProjectMember struct {
 
 // TableName возвращает имя таблицы для GORM
 func (ProjectMember) TableName() string {
-	return "project_team"
+	return "project_teams"
 }
 
 // Composite primary key для ProjectMember

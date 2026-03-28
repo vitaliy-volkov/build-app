@@ -34,3 +34,19 @@ In `production` environment (`APP_ENV=production`), the wildcard `*` for `CORS_A
 ### Health Check
 
 Railway checks `/health` endpoint to verify the service is running.
+
+### Database Migrations
+
+For a clean PostgreSQL database, run schema migrations before the backend starts:
+
+```bash
+./server migrate
+```
+
+The migration runner applies only production-safe schema files and skips the repository's test-data SQL scripts.
+
+If your platform supports a startup-time migration step instead of a separate release command, you can also set:
+
+```bash
+RUN_DB_MIGRATIONS=true
+```

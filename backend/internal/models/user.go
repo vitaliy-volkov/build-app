@@ -38,7 +38,7 @@ type User struct {
 	DeletedAt    gorm.DeletedAt `json:"-" gorm:"index"`
 
 	// Связи с другими таблицами
-	Company Company `json:"company,omitempty" gorm:"foreignKey:CompanyID"`
+	Company *Company `json:"company,omitempty" gorm:"foreignKey:CompanyID"`
 }
 
 // TableName возвращает имя таблицы для GORM

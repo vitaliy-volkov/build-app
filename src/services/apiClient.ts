@@ -28,6 +28,14 @@ interface PaginatedResponse<T> {
   has_prev: boolean;
 }
 
+type PaginatedCollection<T> = PaginatedResponse<T[] | Record<string, T[]>>;
+type InformationalApiResponse = {
+  success?: boolean;
+  data?: void;
+  message?: string;
+  error?: string;
+};
+
 interface LoginRequest {
   email: string;
   password: string;
@@ -78,6 +86,49 @@ class ApiClient {
     this.token = token;
   }
 
+  private isSuccessfulResponse(response: { success?: boolean; error?: string }): boolean {
+    return response.success !== false && !response.error;
+  }
+
+  private normalizePaginatedCollection<T>(
+    response: ApiResponse<PaginatedCollection<T>>,
+    collectionKey?: string
+  ): ApiResponse<PaginatedResponse<T[]>> {
+    if (!response.data) {
+      return response as ApiResponse<PaginatedResponse<T[]>>;
+    }
+
+    const payload = response.data.data;
+    let items: T[] = [];
+
+    if (Array.isArray(payload)) {
+      items = payload;
+    } else if (payload && typeof payload === 'object') {
+      if (collectionKey) {
+        const keyedValue = (payload as Record<string, unknown>)[collectionKey];
+        if (Array.isArray(keyedValue)) {
+          items = keyedValue as T[];
+        }
+      }
+
+      if (!items.length) {
+        const firstArrayValue = Object.values(payload as Record<string, unknown>).find(Array.isArray);
+        if (Array.isArray(firstArrayValue)) {
+          items = firstArrayValue as T[];
+        }
+      }
+    }
+
+    return {
+      ...response,
+      success: response.success !== false,
+      data: {
+        ...response.data,
+        data: items,
+      },
+    };
+  }
+
   // Public method for custom requests (used by service wrappers)
   async customRequest<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
     const url = `${this.baseURL}${endpoint}`;
@@ -101,7 +152,7 @@ class ApiClient {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error((data as any).error || `HTTP ${response.status}`);
+        throw new Error((data as any).error || (data as any).message || `HTTP ${response.status}`);
       }
 
       return data;
@@ -155,7 +206,7 @@ class ApiClient {
       }
 
       if (!response.ok) {
-        throw new Error(data.error || `HTTP ${response.status}`);
+        throw new Error(data.error || data.message || `HTTP ${response.status}`);
       }
 
       return data;
@@ -200,25 +251,31 @@ class ApiClient {
     return response;
   }
 
-  async requestPasswordReset(email: string): Promise<ApiResponse<void>> {
-    return this.request<ApiResponse<void>>('/auth/forgot-password', {
+  async requestPasswordReset(email: string): Promise<boolean> {
+    const response = await this.request<InformationalApiResponse>('/auth/forgot-password', {
       method: 'POST',
       body: JSON.stringify({ email }),
     });
+
+    return this.isSuccessfulResponse(response);
   }
 
-  async confirmPasswordReset(data: { email: string; code: string; new_password: string }): Promise<ApiResponse<void>> {
-    return this.request<ApiResponse<void>>('/auth/reset-password', {
+  async confirmPasswordReset(data: { email: string; code: string; new_password: string }): Promise<boolean> {
+    const response = await this.request<InformationalApiResponse>('/auth/reset-password', {
       method: 'POST',
       body: JSON.stringify(data),
     });
+
+    return this.isSuccessfulResponse(response);
   }
 
-  async changePassword(data: { current_password: string; new_password: string }): Promise<ApiResponse<void>> {
-    return this.request<ApiResponse<void>>('/auth/change-password', {
+  async changePassword(data: { current_password: string; new_password: string }): Promise<boolean> {
+    const response = await this.request<InformationalApiResponse>('/auth/change-password', {
       method: 'POST',
       body: JSON.stringify(data),
     });
+
+    return this.isSuccessfulResponse(response);
   }
 
   async getCurrentUser(): Promise<ApiResponse<{ user: User }>> {
@@ -275,7 +332,8 @@ class ApiClient {
     if (params?.sort_desc) queryParams.append('sort_desc', params.sort_desc.toString());
 
     const endpoint = `/projects${queryParams.toString() ? '?' + queryParams.toString() : ''}`;
-    return this.request<ApiResponse<PaginatedResponse<Project[]>>>(endpoint);
+    const response = await this.request<ApiResponse<PaginatedCollection<Project>>>(endpoint);
+    return this.normalizePaginatedCollection(response, 'projects');
   }
 
   async getProject(id: string): Promise<ApiResponse<{ project: Project }>> {
@@ -316,7 +374,8 @@ class ApiClient {
     if (params?.sort_desc) queryParams.append('sort_desc', params.sort_desc.toString());
 
     const endpoint = `/companies${queryParams.toString() ? '?' + queryParams.toString() : ''}`;
-    return this.request<ApiResponse<PaginatedResponse<Company[]>>>(endpoint);
+    const response = await this.request<ApiResponse<PaginatedCollection<Company>>>(endpoint);
+    return this.normalizePaginatedCollection(response, 'companies');
   }
 
   async getCompany(id: string): Promise<ApiResponse<{ company: Company }>> {
@@ -420,7 +479,8 @@ class ApiClient {
     if (params?.type) queryParams.append('type', params.type);
 
     const endpoint = `/counterparties${queryParams.toString() ? '?' + queryParams.toString() : ''}`;
-    return this.request<ApiResponse<PaginatedResponse<Counterparty[]>>>(endpoint);
+    const response = await this.request<ApiResponse<PaginatedCollection<Counterparty>>>(endpoint);
+    return this.normalizePaginatedCollection(response, 'counterparties');
   }
 
   async createCounterparty(data: Partial<Counterparty>): Promise<ApiResponse<{ counterparty: Counterparty }>> {
@@ -551,21 +611,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const login = async (email: string, password: string): Promise<boolean> => {
-    try {
-      const response = await apiClient.login(email, password);
-      if (response.success && response.data) {
-        setUser(response.data.user);
-        setToken(response.data.tokens.access_token);
-        if (response.data.tokens.refresh_token) {
-          localStorage.setItem('refresh_token', response.data.tokens.refresh_token);
-        }
-        return true;
+    const response = await apiClient.login(email, password);
+    if (response.success && response.data) {
+      setUser(response.data.user);
+      setToken(response.data.tokens.access_token);
+      if (response.data.tokens.refresh_token) {
+        localStorage.setItem('refresh_token', response.data.tokens.refresh_token);
       }
-      return false;
-    } catch (error) {
-      console.error('Login failed:', error);
-      return false;
+      return true;
     }
+
+    throw new Error(response.error || response.message || 'Не удалось выполнить вход');
   };
 
   const register = async (data: RegisterRequest): Promise<boolean> => {
@@ -579,10 +635,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
         return true;
       }
-      return false;
+      throw new Error(response.error || response.message || 'Не удалось выполнить регистрацию');
     } catch (error) {
       console.error('Registration failed:', error);
-      return false;
+      throw error;
     }
   };
 
@@ -598,31 +654,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const requestPasswordReset = async (email: string): Promise<boolean> => {
     try {
-      const response = await apiClient.requestPasswordReset(email);
-      return response.success;
+      return await apiClient.requestPasswordReset(email);
     } catch (error) {
       console.error('Password reset request failed:', error);
-      return false;
+      throw error;
     }
   };
 
   const confirmPasswordReset = async (data: { email: string; code: string; new_password: string }): Promise<boolean> => {
     try {
-      const response = await apiClient.confirmPasswordReset(data);
-      return response.success;
+      return await apiClient.confirmPasswordReset(data);
     } catch (error) {
       console.error('Password reset confirmation failed:', error);
-      return false;
+      throw error;
     }
   };
 
   const changePassword = async (data: { current_password: string; new_password: string }): Promise<boolean> => {
     try {
-      const response = await apiClient.changePassword(data);
-      return response.success;
+      return await apiClient.changePassword(data);
     } catch (error) {
       console.error('Change password failed:', error);
-      return false;
+      throw error;
     }
   };
 
