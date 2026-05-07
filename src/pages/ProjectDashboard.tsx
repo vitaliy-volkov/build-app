@@ -18,7 +18,8 @@ import {
   Copy, FileCheck, Sparkles, RefreshCw, AlertCircle, Wand2, ExternalLink, ShoppingBag, Loader2, Lightbulb,
   MapPin, Move, MousePointer2, Pen, ChevronLeft, ChevronRight, Target, Link, Trash2, Banknote,
   ArrowRightLeft, Stamp, AlertTriangle, ChevronDown, History, GripHorizontal,
-  ThumbsUp, ThumbsDown, ArrowLeft, Settings, Paintbrush, Calculator, Camera, Share2, MessagesSquare
+  ThumbsUp, ThumbsDown, ArrowLeft, Settings, Paintbrush, Calculator, Camera, Share2, MessagesSquare,
+  Ruler
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { v4 as uuidv4 } from 'uuid';
@@ -1192,6 +1193,7 @@ export const ProjectDashboard = () => {
               <ProjectTab id="estimates" label="Сметы" icon={Calculator} active={activeTab === 'estimates'} onClick={setActiveTab} />
               <ProjectTab id="schedule" label="Графики" icon={Calendar} active={activeTab === 'schedule'} onClick={setActiveTab} />
               <ProjectTab id="design" label="Дизайн" icon={Paintbrush} active={activeTab === 'design'} onClick={setActiveTab} />
+              <ProjectTab id="measurements" label="Замеры" icon={Ruler} active={activeTab === 'measurements'} onClick={setActiveTab} />
               <ProjectTab id="supply" label="Снабжение" icon={Truck} active={activeTab === 'supply'} onClick={setActiveTab} />
               <ProjectTab id="complectation" label="Комплектация" icon={PackageCheck} active={activeTab === 'complectation'} onClick={setActiveTab} />
               <ProjectTab id="docs" label="Документы" icon={Folder} active={activeTab === 'docs'} onClick={setActiveTab} />
@@ -1241,13 +1243,28 @@ export const ProjectDashboard = () => {
                <ProjectDesignModule 
                     project={project}
                     designFiles={projectDesign}
-                    tasks={tasks}
-                    estimateItems={projectItems}
-                    aiConfig={aiConfig}
-                    companySettings={companySettings}
+                    markers={designMarkers}
+                    currentUser={currentUser}
                     onAddFile={addDesignFile}
                     onUpdateFile={updateDesignFile}
+                    sendNotification={sendNotification}
+                    companySettings={companySettings}
                />
+            )}
+
+            {activeTab === 'measurements' && (
+                <div className="p-8 text-center text-slate-400 border-2 border-dashed border-slate-200 rounded-xl">
+                    <Ruler size={48} className="mx-auto mb-4 opacity-20"/>
+                    Модуль замеров проекта
+                    <div className="mt-4">
+                        <button 
+                            onClick={() => navigate('/measurements')}
+                            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+                        >
+                            Перейти к замерам
+                        </button>
+                    </div>
+                </div>
             )}
 
             {activeTab === 'complectation' && (

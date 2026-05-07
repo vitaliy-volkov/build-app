@@ -142,15 +142,18 @@ export const useApiData = () => {
     }
   }, [handleError]);
 
-  // Load counterparties
+  // Load counterparties from localStorage + mock data
   const loadCounterparties = useCallback(async () => {
     setLoading(prev => ({ ...prev, counterparties: true }));
     setErrors(prev => ({ ...prev, counterparties: null }));
     
     try {
-      // For now, use mock counterparties until we implement counterparties API
       const { MOCK_COUNTERPARTIES } = await import('../services/mockData');
-      setCounterparties(MOCK_COUNTERPARTIES);
+      // Load custom counterparties from localStorage
+      const stored = localStorage.getItem('custom_counterparties');
+      const customCounterparties = stored ? JSON.parse(stored) : [];
+      // Merge mock and custom
+      setCounterparties([...MOCK_COUNTERPARTIES, ...customCounterparties]);
     } catch (error) {
       handleError('counterparties', error);
       setCounterparties([]);
@@ -158,6 +161,34 @@ export const useApiData = () => {
       setLoading(prev => ({ ...prev, counterparties: false }));
     }
   }, [handleError]);
+
+  // Create counterparty and save to localStorage
+  const createCounterparty = useCallback(async (data: Partial<Counterparty>) => {
+    try {
+      const newCounterparty: Counterparty = {
+        id: `custom-${Date.now()}`,
+        full_name: data.full_name || '',
+        type: data.type || 'Клиент',
+        tax_id: data.tax_id || '',
+        description: data.description || '',
+        ...data
+      } as Counterparty;
+      
+      // Save to localStorage
+      const stored = localStorage.getItem('custom_counterparties');
+      const existing = stored ? JSON.parse(stored) : [];
+      const updated = [...existing, newCounterparty];
+      localStorage.setItem('custom_counterparties', JSON.stringify(updated));
+      
+      // Update state
+      setCounterparties(prev => [...prev, newCounterparty]);
+      
+      return newCounterparty;
+    } catch (error) {
+      console.error('Failed to create counterparty:', error);
+      throw error;
+    }
+  }, []);
 
   // Initialize all data
   const initializeData = useCallback(async () => {
@@ -261,6 +292,7 @@ export const useApiData = () => {
     loadEstimates,
     loadUsers,
     loadCounterparties,
+    createCounterparty,
     initializeData,
 
     // Setters for state management

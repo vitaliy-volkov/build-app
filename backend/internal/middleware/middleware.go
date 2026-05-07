@@ -131,26 +131,8 @@ func ErrorHandlingMiddleware() gin.HandlerFunc {
             return
         }
 
-        // Если статус код >= 500, это серверная ошибка
-        if c.Writer.Status() >= http.StatusInternalServerError {
-            // requestID := "-"
-            // if value, exists := c.Get("request_id"); exists {
-            //     requestID = value.(string)
-            // }
-
-            c.JSON(http.StatusInternalServerError, models.NewErrorResponse(
-                "Internal server error",
-                http.StatusInternalServerError,
-            ))
-
-            // Логируем серверную ошибку
-            // logrus.WithFields(logrus.Fields{
-            //     "request_id":  requestID,
-            //     "status_code": c.Writer.Status(),
-            //     "method":      c.Request.Method,
-            //     "path":        c.Request.URL.Path,
-            // }).Error("Server error")
-        }
+        // Серверные ошибки уже обработаны в handlers, здесь не пишем повторно
+        // чтобы не дублировать тело ответа
     }
 }
 

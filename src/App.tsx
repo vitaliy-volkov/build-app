@@ -1,5 +1,5 @@
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { HashRouter, Routes, Route, Navigate, Link, useLocation } from 'react-router-dom';
 import { Layout } from './components/Layout';
 import { PublicLayout } from './components/PublicLayout';
@@ -115,7 +115,7 @@ interface AppState {
   setCurrentUser: (user: User) => void;
   updateUser: (user: User) => void; 
   addUser: (user: User) => void; // NEW: Add user action
-  addProject: (project: Project) => Promise<void>; 
+  addProject: (project: Project) => Promise<string>; 
   updateProject: (project: Project) => void;
   addPayment: (payment: Payment) => void;
   updateEstimateItem: (item: EstimateItem) => void;
@@ -158,6 +158,8 @@ interface AppState {
   addFinancialArticle: (a: FinancialArticle) => void;
   updateFinancialArticle: (a: FinancialArticle) => void;
   deleteFinancialArticle: (id: string) => void;
+  // Counterparty Actions
+  addCounterparty: (counterparty: Counterparty) => void;
   // CRM Actions
   addLead: (lead: Lead) => void;
   updateLead: (lead: Lead) => void;
@@ -212,26 +214,26 @@ const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [estimateItems, setEstimateItemsState] = useState<EstimateItem[]>(MOCK_ESTIMATE_ITEMS);
   const [counterparties, setCounterpartiesState] = useState<Counterparty[]>([]);
   const [payments, setPaymentsState] = useState<Payment[]>(MOCK_PAYMENTS);
-  const [events] = useState(MOCK_EVENTS);
-  const [supplyRequests] = useState(MOCK_SUPPLY_REQUESTS);
-  const [documents] = useState(MOCK_DOCUMENTS);
-  const [notifications] = useState(MOCK_NOTIFICATIONS);
-  const [acts] = useState(MOCK_ACTS);
-  const [priceListCategories] = useState(MOCK_PRICE_CATEGORIES);
-  const [priceListItems] = useState(MOCK_PRICE_ITEMS);
-  const [designFiles] = useState(MOCK_DESIGN_FILES);
-  const [specifications] = useState(MOCK_SPECIFICATIONS);
-  const [tasks] = useState(MOCK_TASKS);
-  const [chatMessages] = useState(MOCK_CHAT);
-  const [photoStream] = useState(MOCK_PHOTOSTREAM);
-  const [cashAccounts] = useState(MOCK_CASH_ACCOUNTS);
-  const [financialArticles] = useState(MOCK_FINANCIAL_ARTICLES);
-  const [transactions] = useState(MOCK_TRANSACTIONS);
-  const [leads] = useState(MOCK_LEADS);
-  const [templates] = useState(MOCK_TEMPLATES);
-  const [operationTemplates] = useState(MOCK_OPERATION_TEMPLATES);
-  const [operationTemplateItems] = useState(MOCK_OPERATION_TEMPLATE_ITEMS);
-  const [measurements] = useState(MOCK_MEASUREMENTS);
+  const [events, setEvents] = useState(MOCK_EVENTS);
+  const [supplyRequests, setSupplyRequests] = useState(MOCK_SUPPLY_REQUESTS);
+  const [documents, setDocuments] = useState(MOCK_DOCUMENTS);
+  const [notifications, setNotifications] = useState(MOCK_NOTIFICATIONS);
+  const [acts, setActs] = useState(MOCK_ACTS);
+  const [priceListCategories, setPriceListCategories] = useState(MOCK_PRICE_CATEGORIES);
+  const [priceListItems, setPriceListItems] = useState(MOCK_PRICE_ITEMS);
+  const [designFiles, setDesignFiles] = useState(MOCK_DESIGN_FILES);
+  const [specifications, setSpecifications] = useState(MOCK_SPECIFICATIONS);
+  const [tasks, setTasks] = useState(MOCK_TASKS);
+  const [chatMessages, setChatMessages] = useState(MOCK_CHAT);
+  const [photoStream, setPhotoStream] = useState(MOCK_PHOTOSTREAM);
+  const [cashAccounts, setCashAccounts] = useState(MOCK_CASH_ACCOUNTS);
+  const [financialArticles, setFinancialArticles] = useState(MOCK_FINANCIAL_ARTICLES);
+  const [transactions, setTransactions] = useState(MOCK_TRANSACTIONS);
+  const [leads, setLeads] = useState(MOCK_LEADS);
+  const [templates, setTemplates] = useState(MOCK_TEMPLATES);
+  const [operationTemplates, setOperationTemplates] = useState(MOCK_OPERATION_TEMPLATES);
+  const [operationTemplateItems, setOperationTemplateItems] = useState(MOCK_OPERATION_TEMPLATE_ITEMS);
+  const [measurements, setMeasurements] = useState<MeasurementProject[]>(MOCK_MEASUREMENTS);
   const [companySettings, setCompanySettings] = useState<CompanySettings>(MOCK_COMPANY_SETTINGS);
   const [aiConfig, setAiConfig] = useState(MOCK_AI_CONFIG);
   
@@ -264,23 +266,42 @@ const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     setErrors(prev => ({ ...prev, global: null }));
     
     try {
-      if (!isAuthenticated) return;
+      console.log('initializeData: isAuthenticated=', isAuthenticated);
+      if (!isAuthenticated) {
+        console.log('initializeData: not authenticated, skipping');
+        return;
+      }
 
+      const token = localStorage.getItem('access_token');
+      console.log('initializeData: token=', token ? token.substring(0, 20) + '...' : 'null');
+      
+      // Проверим что токен установлен в apiClient
+      console.log('initializeData: apiClient token set');
+      
       const projectsRes = await apiClient.getProjects({ limit: 1000 });
+      console.log('initializeData: projects response success=', projectsRes.success, 'count=', projectsRes.data?.data?.length || 0);
 
       if (projectsRes.success && projectsRes.data) {
         setProjectsState(projectsRes.data.data);
+        console.log('initializeData: projects loaded into state');
       } else {
+        console.error('initializeData: failed to load projects', projectsRes.error);
         throw new Error(projectsRes.error || 'Failed to load projects');
       }
 
       // Counterparties API is not implemented on the backend yet.
-      // Use demo data so the authenticated shell remains usable after login.
-      setCounterpartiesState(MOCK_COUNTERPARTIES);
+      // Use localStorage + mock data
+      const stored = localStorage.getItem('custom_counterparties');
+      const customCounterparties = stored ? JSON.parse(stored) : [];
+      setCounterpartiesState([...MOCK_COUNTERPARTIES, ...customCounterparties]);
       
     } catch (error) {
       console.error('Failed to initialize data:', error);
-      setErrors(prev => ({ ...prev, global: error instanceof Error ? error.message : 'Unknown error' }));
+      setProjectsState(MOCK_PROJECTS);
+      const stored = localStorage.getItem('custom_counterparties');
+      const customCounterparties = stored ? JSON.parse(stored) : [];
+      setCounterpartiesState([...MOCK_COUNTERPARTIES, ...customCounterparties]);
+      setErrors(prev => ({ ...prev, global: null }));
     } finally {
       setLoading(prev => ({ ...prev, global: false }));
     }
@@ -329,33 +350,6 @@ const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   }, [isAuthenticated, currentUser]);
 
 
-  // Mock setters (no-op for now)
-  const setUsers = () => {};
-  const setEstimates = () => {};
-  const setEstimateItems = () => {};
-  const setPayments = () => {};
-  const setEvents = () => {};
-  const setSupplyRequests = () => {};
-  const setDocuments = () => {};
-  const setNotifications = () => {};
-  const setActs = () => {};
-  const setPriceListCategories = () => {};
-  const setPriceListItems = () => {};
-  const setDesignFiles = () => {};
-  const setSpecifications = () => {};
-  const setTasks = () => {};
-  const setChatMessages = () => {};
-  const setPhotoStream = () => {};
-  const setCashAccounts = () => {};
-  const setFinancialArticles = () => {};
-  const setTransactions = () => {};
-  const setLeads = () => {};
-  const setTemplates = () => {};
-  const setOperationTemplates = () => {};
-  const setOperationTemplateItems = () => {};
-  const setMeasurements = () => {};
-
-
   // Auth Actions
   // Устаревший метод - используется только для обратной совместимости
   // Auth.tsx теперь использует useAuth() из apiClient напрямую
@@ -393,15 +387,27 @@ const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     }
   };
 
-  const addProject = async (project: Project) => {
+  const addProject = async (project: Project): Promise<string> => {
     try {
       setLoading(prev => ({ ...prev, projects: true }));
-      // Omit ID so backend generates it? Or keep it?
-      // Since frontend generates UUID, we can send it.
-      const response = await apiClient.createProject(project);
+      // Backend требует customer_id как FK на existing company. 
+      // Так как заказчики хранятся локально, не отправляем customer_id на бэкенд,
+      // но сохраняем его локально для отображения.
+      const localCustomerId = project.customer_id;
+      const projectForBackend = { ...project };
+      delete (projectForBackend as any).customer_id;
+      delete (projectForBackend as any).general_contractor_id;
+      delete (projectForBackend as any).contact_person_id;
+      delete (projectForBackend as any).team;
+      
+      const response = await apiClient.createProject(projectForBackend);
       
       if (response.success && response.data) {
-        setProjectsState(prev => [...prev, response.data!.project]);
+        // Восстанавливаем локальный customer_id для отображения
+        const projectWithLocalData = { ...response.data.project, customer_id: localCustomerId };
+        setProjectsState(prev => [...prev, projectWithLocalData]);
+        // Возвращаем ID созданного проекта (серверный)
+        return response.data.project.id;
       } else {
         throw new Error(response.error || 'Failed to create project');
       }
@@ -697,6 +703,18 @@ const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
      setFinancialArticles(prev => prev.filter(a => a.id !== id));
   };
 
+  // --- COUNTERPARTY ACTIONS ---
+  const addCounterparty = (counterparty: Counterparty) => {
+    setCounterpartiesState(prev => {
+      const updated = [...prev, counterparty];
+      // Save to localStorage
+      const stored = localStorage.getItem('custom_counterparties');
+      const existing = stored ? JSON.parse(stored) : [];
+      localStorage.setItem('custom_counterparties', JSON.stringify([...existing, counterparty]));
+      return updated;
+    });
+  };
+
   // --- CRM ACTIONS ---
   const addLead = (lead: Lead) => setLeads(prev => [...prev, lead]);
   const updateLead = (lead: Lead) => setLeads(prev => prev.map(l => l.id === lead.id ? lead : l));
@@ -710,7 +728,7 @@ const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
           email: lead.email,
           description: `Создан из лида: ${lead.id}`
       };
-      setCounterparties(prev => [...prev, newClient]);
+      setCounterpartiesState(prev => [...prev, newClient]);
 
       const newProject: Project = {
           id: uuidv4(),
@@ -887,8 +905,13 @@ const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const deleteOperationTemplateItem = (id: string) => setOperationTemplateItems(prev => prev.filter(i => i.id !== id));
 
   // --- Measurement Actions ---
-  const addMeasurementProject = (mp: MeasurementProject) => setMeasurements(prev => [...prev, mp]);
-  const updateMeasurementProject = (mp: MeasurementProject) => setMeasurements(prev => prev.map(m => m.id === mp.id ? mp : m));
+  const addMeasurementProject = useCallback((mp: MeasurementProject) => {
+      console.log('App: addMeasurementProject called', mp.id, mp.projectId);
+      setMeasurements(prev => [...prev, mp]);
+  }, []);
+  const updateMeasurementProject = useCallback((mp: MeasurementProject) => {
+      setMeasurements(prev => prev.map(m => m.id === mp.id ? mp : m));
+  }, []);
 
   // --- Helpers for Copying ---
   const addItemToPriceList = (item: EstimateItem) => {
@@ -949,6 +972,7 @@ const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
       addPriceListCategory, updatePriceListCategory, deletePriceListCategory, addPriceListItem, updatePriceListItem, deletePriceListItem,
       addDesignFile, updateDesignFile, addSpecItem, updateSpecItem, addTask, updateTask, addChatMessage, addPhotoStreamPost,
       addTransaction, updateTransaction, deleteTransaction, addCashAccount, updateCashAccount, addFinancialArticle, updateFinancialArticle, deleteFinancialArticle,
+      addCounterparty,
       addLead, updateLead, convertLeadToProject,
       saveProjectAsTemplate, createProjectFromTemplate,
       addOperationTemplate, updateOperationTemplate, deleteOperationTemplate, addOperationTemplateItem, updateOperationTemplateItem, deleteOperationTemplateItem,

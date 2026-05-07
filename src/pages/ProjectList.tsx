@@ -6,9 +6,11 @@ import { ProjectStatus, Project, ProjectTemplate } from '../types';
 import { useNavigate } from 'react-router-dom';
 import { Building2, MapPin, Calendar, Filter, Plus, FilePlus, X } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
+import { useAuth } from '../services/apiClient';
 
 export const ProjectList = () => {
-  const { projects, counterparties, templates, addProject, createProjectFromTemplate } = useApp();
+  const { projects, counterparties, templates, addProject, createProjectFromTemplate, addCounterparty } = useApp();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const [statusFilter, setStatusFilter] = useState<ProjectStatus | 'All'>('All');
   
@@ -18,9 +20,23 @@ export const ProjectList = () => {
 
   const getClientName = (id: string) => counterparties.find(c => c.id === id)?.full_name || 'Неизвестно';
 
-  const filteredProjects = projects.filter(project => 
-    statusFilter === 'All' || project.status === statusFilter
-  );
+  // Map server status enum to display enum
+  const getDisplayStatus = (serverStatus: string): string => {
+    const statusMap: Record<string, string> = {
+      'planning': ProjectStatus.Planning,
+      'in_progress': ProjectStatus.Active,
+      'paused': ProjectStatus.OnHold,
+      'completed': ProjectStatus.Completed,
+      'cancelled': ProjectStatus.Cancelled,
+    };
+    return statusMap[serverStatus] || serverStatus;
+  };
+
+  const filteredProjects = projects.filter(project => {
+    if (statusFilter === 'All') return true;
+    const displayStatus = getDisplayStatus(project.status);
+    return displayStatus === statusFilter;
+  });
 
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
@@ -126,31 +142,35 @@ export const ProjectList = () => {
           onClose={() => setIsNewProjectModalOpen(false)}
           templates={templates}
           counterparties={counterparties}
+          onAddCounterparty={addCounterparty}
           onSave={async (data, templateId) => {
             try {
               if (templateId) {
                  createProjectFromTemplate(templateId, data);
+                 setIsNewProjectModalOpen(false);
               } else {
-                 // Manual Create
-                 const newId = uuidv4();
-                 await addProject({
-                    id: newId,
+                 // Manual Create - используем серверный ID
+                 const serverProjectId = await addProject({
+                    id: 'temp-' + Date.now(), // временный ID, сервер создаст свой
                     name: data.name!,
                     address: data.address!,
-                    contract_number: 'Б/Н',
+                    contract_number: 'BN-' + Date.now().toString().slice(-6),
                     contract_date: new Date().toISOString().split('T')[0],
                     description: '',
                     customer_id: data.customer_id!,
                     general_contractor_id: '',
                     contact_person_id: '',
-                    status: ProjectStatus.Planning,
-                    team: []
+                    status: 'planning' as any,
+                    team: [],
+                    company_id: user?.company_id || user?.company?.id || ''
                  });
-                 navigate(`/projects/${newId}`);
+                 setIsNewProjectModalOpen(false);
+                 // Переходим на проект с серверным ID
+                 navigate(`/projects/${serverProjectId}`);
               }
-              setIsNewProjectModalOpen(false);
             } catch (error) {
               console.error("Failed to create project", error);
+              alert('Ошибка создания проекта: ' + (error instanceof Error ? error.message : String(error)));
             }
           }}
         />
@@ -159,21 +179,86 @@ export const ProjectList = () => {
   );
 };
 
-const NewProjectModal = ({ isOpen, onClose, templates, counterparties, onSave }: { 
+const NewProjectModal = ({ isOpen, onClose, templates, counterparties, onSave, onAddCounterparty }: { 
   isOpen: boolean;
   onClose: () => void;
   templates: ProjectTemplate[];
   counterparties: any[];
   onSave: (data: Partial<Project>, templateId?: string) => void;
+  onAddCounterparty: (counterparty: any) => void;
 }) => {
   const [form, setForm] = useState<{ name: string, address: string, customer_id: string, templateId: string }>({
      name: '', address: '', customer_id: '', templateId: ''
   });
+  const [showNewCustomerForm, setShowNewCustomerForm] = useState(false);
+  const [newCustomer, setNewCustomer] = useState({ full_name: '', phone: '', email: '', tax_id: '' });
 
   const handleSubmit = (e: React.FormEvent) => {
      e.preventDefault();
      onSave(form, form.templateId || undefined);
   };
+
+  const handleCreateCustomer = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newCustomer.full_name.trim()) return;
+    
+    const customer = {
+      id: uuidv4(),
+      full_name: newCustomer.full_name,
+      type: 'Клиент',
+      phone: newCustomer.phone,
+      email: newCustomer.email,
+      tax_id: newCustomer.tax_id,
+    };
+    
+    onAddCounterparty(customer);
+    setForm({ ...form, customer_id: customer.id });
+    setShowNewCustomerForm(false);
+    setNewCustomer({ full_name: '', phone: '', email: '', tax_id: '' });
+  };
+
+  if (showNewCustomerForm) {
+    return (
+      <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+        <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
+          <div className="flex justify-between items-center mb-6">
+            <h3 className="text-xl font-bold">Новый заказчик</h3>
+            <button onClick={() => setShowNewCustomerForm(false)}><X size={24} className="text-slate-400"/></button>
+          </div>
+          <form onSubmit={handleCreateCustomer} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Название / ФИО *</label>
+              <input required className="w-full p-2 border rounded-lg" value={newCustomer.full_name} 
+                onChange={e => setNewCustomer({...newCustomer, full_name: e.target.value})} 
+                placeholder="ООО Ромашка или Иванов И.И." />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Телефон</label>
+              <input className="w-full p-2 border rounded-lg" value={newCustomer.phone} 
+                onChange={e => setNewCustomer({...newCustomer, phone: e.target.value})} 
+                placeholder="+7 (999) 123-45-67" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Email</label>
+              <input type="email" className="w-full p-2 border rounded-lg" value={newCustomer.email} 
+                onChange={e => setNewCustomer({...newCustomer, email: e.target.value})} 
+                placeholder="email@example.com" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">ИНН</label>
+              <input className="w-full p-2 border rounded-lg" value={newCustomer.tax_id} 
+                onChange={e => setNewCustomer({...newCustomer, tax_id: e.target.value})} 
+                placeholder="1234567890" />
+            </div>
+            <div className="flex space-x-3 pt-4">
+              <button type="button" onClick={() => setShowNewCustomerForm(false)} className="flex-1 py-2.5 bg-slate-100 text-slate-600 rounded-lg font-medium">Отмена</button>
+              <button type="submit" className="flex-1 py-2.5 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700">Создать заказчика</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    );
+  }
 
   return (
      <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
@@ -217,7 +302,16 @@ const NewProjectModal = ({ isOpen, onClose, templates, counterparties, onSave }:
                  </div>
 
                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Заказчик</label>
+                    <div className="flex justify-between items-center mb-1">
+                      <label className="block text-sm font-medium text-slate-700">Заказчик</label>
+                      <button 
+                        type="button"
+                        onClick={() => setShowNewCustomerForm(true)}
+                        className="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center"
+                      >
+                        <Plus size={16} className="mr-1" /> Новый заказчик
+                      </button>
+                    </div>
                     <select className="w-full p-2 border rounded-lg" value={form.customer_id} onChange={e => setForm({...form, customer_id: e.target.value})} required>
                         <option value="">Выберите заказчика</option>
                         {counterparties.filter(c => c.type === 'Клиент').map(c => (

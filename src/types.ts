@@ -152,7 +152,8 @@ export enum ProjectStatus {
   Planning = "Планирование",
   Active = "В работе",
   OnHold = "Приостановлен",
-  Completed = "Завершен"
+  Completed = "Завершен",
+  Cancelled = "Отменен"
 }
 
 export interface Project {

@@ -1,0 +1,42 @@
+server:
+  port: 8080
+  read_timeout: 30s
+  write_timeout: 30s
+
+database:
+  host: localhost
+  port: 5432
+  user: stroy_user
+  password: stroy_password
+  dbname: stroy_control
+  ssl_mode: disable
+
+jwt:
+  secret: "demo-super-secret-key-for-jwt-tokens-32-chars"
+  access_token_ttl: 15m
+  refresh_token_ttl: 168h
+  issuer: stroy-control-backend
+
+redis:
+  host: localhost
+  port: 6379
+  password: ""
+  db: 0
+
+cors:
+  allowed_origins:
+    - http://localhost:3000
+    - http://localhost:5173
+    - http://127.0.0.1:3000
+
+ai:
+  gateway_url: ""
+  api_key: ""
+
+email:
+  smtp_host: ""
+  smtp_port: 587
+  smtp_username: ""
+  smtp_password: ""
+  from_address: ""
+  from_name: ""

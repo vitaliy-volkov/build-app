@@ -1,5 +1,5 @@
 
-import React, { useState, useRef, useEffect, useMemo } from 'react';
+import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { useApp } from '../App';
 import { MeasurementProject, MeasurementFloor, MeasurementRoom, MeasurementPoint, MeasurementOpening, ManualMeasurementStats, ManualWall, ManualOpening, AutoRectData, AutoRectOpening, MeasurementCalcSnapshot } from '../types';
 import { calculateRoomSnapshot } from '../services/measurementMath';
@@ -650,14 +650,38 @@ const MetricsPanel = ({ room }: { room: MeasurementRoom }) => {
 
 export const Measurements = () => {
   const { measurements, addMeasurementProject, updateMeasurementProject, projects } = useApp();
-  const [selectedProjectId, setSelectedProjectId] = useState<string>(projects[0]?.id || '');
+  const [selectedProjectId, setSelectedProjectId] = useState<string>('');
+  const [isInitializing, setIsInitializing] = useState(false);
   
-  const activeMeasurement = measurements.find(m => m.projectId === selectedProjectId);
+  // Debug logging
+  useEffect(() => {
+      console.log('Measurements: projects count=', projects.length, 'selectedProjectId=', selectedProjectId);
+      console.log('Measurements: measurements count=', measurements.length, 'measurements=', measurements.map(m => m.projectId));
+  }, [projects, measurements, selectedProjectId]);
+  
+  // Update selected project when projects are loaded
+  useEffect(() => {
+      if (projects.length > 0 && !selectedProjectId) {
+          console.log('Measurements: setting selectedProjectId to', projects[0].id);
+          setSelectedProjectId(projects[0].id);
+      }
+  }, [projects, selectedProjectId]);
+  
+  // Use useMemo to prevent recalculation on every render
+  const activeMeasurement = useMemo(() => 
+      measurements.find(m => m.projectId === selectedProjectId),
+      [measurements, selectedProjectId]
+  );
+  
   const [activeFloorId, setActiveFloorId] = useState<string>('');
   const [activeRoomId, setActiveRoomId] = useState<string>('');
 
+  // Create measurement project if it doesn't exist
   useEffect(() => {
-      if (selectedProjectId && !activeMeasurement) {
+      console.log('Measurements: checking creation - selectedProjectId=', selectedProjectId, 'activeMeasurement=', !!activeMeasurement, 'isInitializing=', isInitializing);
+      if (selectedProjectId && !activeMeasurement && !isInitializing) {
+          console.log('Measurements: creating new measurement project for', selectedProjectId);
+          setIsInitializing(true);
           const initRoom: MeasurementRoom = {
               id: uuidv4(), name: 'Помещение 1', height: 2700, points: [], openings: [], mode: 'drawing', manualWalls: []
           };
@@ -675,15 +699,26 @@ export const Measurements = () => {
               }]
           };
           addMeasurementProject(newMp);
+          console.log('Measurements: added new measurement project');
       }
-  }, [selectedProjectId, activeMeasurement]);
-
+  }, [selectedProjectId, activeMeasurement, isInitializing, addMeasurementProject]);
+  
+  // Reset isInitializing when measurement appears
   useEffect(() => {
+      if (activeMeasurement && isInitializing) {
+          setIsInitializing(false);
+      }
+  }, [activeMeasurement, isInitializing]);
+
+  // Set active floor/room when measurement is created
+  useEffect(() => {
+      console.log('Measurements: setting floor/room - activeMeasurement=', !!activeMeasurement, 'activeFloorId=', activeFloorId);
       if (activeMeasurement && !activeFloorId) {
+          console.log('Measurements: setting floor', activeMeasurement.floors[0].id, 'room', activeMeasurement.floors[0].rooms[0].id);
           setActiveFloorId(activeMeasurement.floors[0].id);
           setActiveRoomId(activeMeasurement.floors[0].rooms[0].id);
       }
-  }, [activeMeasurement]);
+  }, [activeMeasurement, activeFloorId]);
 
   const activeFloor = activeMeasurement?.floors.find(f => f.id === activeFloorId);
   const activeRoom = activeFloor?.rooms.find(r => r.id === activeRoomId);
@@ -719,7 +754,15 @@ export const Measurements = () => {
       setActiveRoomId(newRoom.id);
   };
 
-  if (!activeMeasurement || !activeFloor || !activeRoom) return <div className="p-8 text-center">Загрузка модуля замеров...</div>;
+  // Show message when no projects available
+  if (projects.length === 0) {
+      return <div className="p-8 text-center text-slate-500">Нет доступных проектов. Создайте проект для начала работы с замерами.</div>;
+  }
+  
+  // Show loading while measurement is being initialized
+  if (!activeMeasurement || !activeFloor || !activeRoom) {
+      return <div className="p-8 text-center text-slate-500">Инициализация модуля замеров...</div>;
+  }
 
   return (
     <div className="h-[calc(100vh-6rem)] flex flex-col bg-slate-100">

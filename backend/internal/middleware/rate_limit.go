@@ -21,7 +21,7 @@ type RateLimitMiddleware struct {
 func NewRateLimitMiddleware(redisService *redis.RedisService) *RateLimitMiddleware {
 	return &RateLimitMiddleware{
 		redisService:  redisService,
-		defaultLimit:  100,       // 100 запросов
+		defaultLimit:  10000,     // 10000 запросов для разработки
 		defaultWindow: time.Hour, // в час
 	}
 }

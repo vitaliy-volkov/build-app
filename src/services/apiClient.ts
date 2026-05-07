@@ -98,23 +98,36 @@ class ApiClient {
       return response as ApiResponse<PaginatedResponse<T[]>>;
     }
 
-    const payload = response.data.data;
+    // Backend returns { data: { projects: [...], total, ... } }
+    // We need to extract the array using collectionKey
     let items: T[] = [];
+    const responseData = response.data as any;
 
-    if (Array.isArray(payload)) {
-      items = payload;
-    } else if (payload && typeof payload === 'object') {
-      if (collectionKey) {
-        const keyedValue = (payload as Record<string, unknown>)[collectionKey];
-        if (Array.isArray(keyedValue)) {
-          items = keyedValue as T[];
-        }
+    // First try collectionKey directly in response.data (backend structure)
+    if (collectionKey && responseData[collectionKey]) {
+      const keyedValue = responseData[collectionKey];
+      if (Array.isArray(keyedValue)) {
+        items = keyedValue as T[];
       }
-
-      if (!items.length) {
-        const firstArrayValue = Object.values(payload as Record<string, unknown>).find(Array.isArray);
-        if (Array.isArray(firstArrayValue)) {
-          items = firstArrayValue as T[];
+    }
+    // Then try response.data.data (legacy structure)
+    else if (responseData.data) {
+      const payload = responseData.data;
+      if (Array.isArray(payload)) {
+        items = payload;
+      } else if (payload && typeof payload === 'object') {
+        if (collectionKey) {
+          const keyedValue = (payload as Record<string, unknown>)[collectionKey];
+          if (Array.isArray(keyedValue)) {
+            items = keyedValue as T[];
+          }
+        }
+        // Fallback: find first array in the object
+        if (!items.length) {
+          const firstArrayValue = Object.values(payload as Record<string, unknown>).find(Array.isArray);
+          if (Array.isArray(firstArrayValue)) {
+            items = firstArrayValue as T[];
+          }
         }
       }
     }
@@ -123,7 +136,7 @@ class ApiClient {
       ...response,
       success: response.success !== false,
       data: {
-        ...response.data,
+        ...responseData,
         data: items,
       },
     };
@@ -588,20 +601,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const initAuth = async () => {
       const savedToken = localStorage.getItem('access_token');
       if (savedToken) {
+        // Сначала устанавливаем токен в apiClient!
+        apiClient.setToken(savedToken);
         try {
           const response = await apiClient.getCurrentUser();
           if (response.success && response.data?.user) {
             setUser(response.data.user);
             setToken(savedToken);
-            apiClient.setToken(savedToken);
           } else {
             localStorage.removeItem('access_token');
             localStorage.removeItem('refresh_token');
+            apiClient.setToken(null);
           }
         } catch (error) {
           console.error('Auth initialization failed:', error);
           localStorage.removeItem('access_token');
           localStorage.removeItem('refresh_token');
+          apiClient.setToken(null);
         }
       }
       setIsLoading(false);
@@ -615,6 +631,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (response.success && response.data) {
       setUser(response.data.user);
       setToken(response.data.tokens.access_token);
+      apiClient.setToken(response.data.tokens.access_token);
       if (response.data.tokens.refresh_token) {
         localStorage.setItem('refresh_token', response.data.tokens.refresh_token);
       }
@@ -630,6 +647,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (response.success && response.data) {
         setUser(response.data.user);
         setToken(response.data.tokens.access_token);
+        apiClient.setToken(response.data.tokens.access_token);
         if (response.data.tokens.refresh_token) {
           localStorage.setItem('refresh_token', response.data.tokens.refresh_token);
         }
