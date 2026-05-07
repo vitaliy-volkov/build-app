@@ -37,6 +37,7 @@ import { CRM } from './pages/CRM';
 import { EstimatesList } from './pages/EstimatesList';
 import { Resources } from './pages/Resources';
 import { Measurements } from './pages/Measurements';
+import { Supply } from './pages/Supply';
 import { Landing } from './pages/Landing';
 import { Profile } from './pages/Profile';
 import { EstimatesPromo, FinancePromo, AIPromo, SupplyPromo } from './pages/PromoPages';
@@ -45,6 +46,9 @@ import { Blog, BlogPost } from './pages/Blog';
 import { v4 as uuidv4 } from 'uuid';
 import { ArrowRight } from 'lucide-react';
 import { apiClient, useAuth } from './services/apiClient';
+import { tokenManager } from './services/tokenManager';
+import { AuthGuard } from './components/AuthGuard';
+import { useDataInit } from './hooks/useDataInit';
 import { AppProviders } from './providers/AppProviders';
 
 // --- State Management (Context) ---
@@ -1028,8 +1032,9 @@ import { ForgotPasswordPage } from './pages/auth/ForgotPasswordPage';
 import { ResetPasswordPage } from './pages/auth/ResetPasswordPage';
 import { CreateCompany } from './pages/Onboarding/CreateCompany';
 
-const AppRoutes = () => {
-  const { isAuthenticated, isLoading, hasError, errors, initializeData, currentUser } = useApp();
+// Protected Route wrapper component
+const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
+  const { isReady, isLoading, error, retry } = useDataInit();
 
   if (isLoading) {
     return (
@@ -1039,100 +1044,142 @@ const AppRoutes = () => {
         error={null}
         onRetry={() => {}}
       >
-        <div /> 
+        <div />
       </LoadingState>
     );
   }
 
-  if (hasError) {
-     return (
+  if (error) {
+    return (
       <LoadingState
         isLoading={false}
         hasError={true}
-        error={errors.global}
-        onRetry={initializeData}
+        error={error}
+        onRetry={retry}
       >
         <div />
       </LoadingState>
-     );
-  }
-
-  if (!isAuthenticated) {
-    return (
-      <PublicLayout>
-          <Routes>
-            <Route path="/" element={<Landing />} />
-            <Route path="/estimates-promo" element={<EstimatesPromo />} />
-            <Route path="/finance-promo" element={<FinancePromo />} />
-            <Route path="/ai-promo" element={<AIPromo />} />
-            <Route path="/supply-promo" element={<SupplyPromo />} />
-            <Route path="/about" element={<About />} />
-            <Route path="/contacts" element={<Contacts />} />
-            <Route path="/blog" element={<Blog />} />
-            <Route path="/blog/:id" element={<BlogPost />} />
-            <Route path="/auth" element={<Navigate to="/login" replace />} />
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/register" element={<RegisterPage />} />
-            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-            <Route path="/reset-password" element={<ResetPasswordPage />} />
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-      </PublicLayout>
     );
   }
 
-  // Onboarding Check: User is authenticated but has no company
-  const needsOnboarding = !currentUser?.company_id || currentUser.company_id === '00000000-0000-0000-0000-000000000001';
-  
-  if (needsOnboarding) {
-      return (
+  return (
+    <AuthGuard>
+      {isReady ? children : (
+        <LoadingState
+          isLoading={true}
+          hasError={false}
+          error={null}
+          onRetry={() => {}}
+        >
+          <div />
+        </LoadingState>
+      )}
+    </AuthGuard>
+  );
+};
+
+const AppRoutes = () => {
+  const { currentUser } = useApp();
+  const location = useLocation();
+
+  // Check if user needs onboarding
+  const needsOnboarding = currentUser && (!currentUser.company_id || currentUser.company_id === '00000000-0000-0000-0000-000000000001');
+
+  // Public routes - no auth required
+  const publicRoutes = (
+    <PublicLayout>
+      <Routes>
+        <Route path="/" element={<Landing />} />
+        <Route path="/estimates-promo" element={<EstimatesPromo />} />
+        <Route path="/finance-promo" element={<FinancePromo />} />
+        <Route path="/ai-promo" element={<AIPromo />} />
+        <Route path="/supply-promo" element={<SupplyPromo />} />
+        <Route path="/about" element={<About />} />
+        <Route path="/contacts" element={<Contacts />} />
+        <Route path="/blog" element={<Blog />} />
+        <Route path="/blog/:id" element={<BlogPost />} />
+        <Route path="/auth" element={<Navigate to="/login" replace />} />
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/register" element={<RegisterPage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </PublicLayout>
+  );
+
+  // Onboarding routes - auth required but no company
+  const onboardingRoutes = (
+    <AuthGuard>
+      <Routes>
+        <Route path="/onboarding/create-company" element={<CreateCompany />} />
+        <Route path="*" element={<Navigate to="/onboarding/create-company" replace />} />
+      </Routes>
+    </AuthGuard>
+  );
+
+  // Protected app routes
+  const protectedAppRoutes = (
+    <ProtectedRoute>
+      <Layout>
         <Routes>
-             <Route path="/onboarding/create-company" element={<CreateCompany />} />
-             <Route path="*" element={<Navigate to="/onboarding/create-company" replace />} />
+          <Route path="/" element={<CompanyDashboard />} />
+          <Route path="/projects" element={<ProjectList />} />
+          <Route path="/projects/:id" element={<ProjectDashboard />} />
+          <Route path="/estimates" element={<EstimatesList />} />
+          <Route path="/estimates/:id" element={<EstimateEditor />} />
+          <Route path="/finance" element={<Finance />} />
+          <Route path="/crm" element={<CRM />} />
+          <Route path="/directories" element={<Directories />} />
+          <Route path="/resources" element={<Resources />} />
+          <Route path="/measurements" element={<Measurements />} />
+          <Route path="/settings" element={<Settings />} />
+          <Route path="/knowledge-base" element={<KnowledgeBase />} />
+          <Route path="/profile" element={<Profile />} />
+
+          {/* Promo Pages - accessible when logged in */}
+          <Route path="/estimates-promo" element={<EstimatesPromo />} />
+          <Route path="/finance-promo" element={<FinancePromo />} />
+          <Route path="/ai-promo" element={<AIPromo />} />
+          <Route path="/supply-promo" element={<SupplyPromo />} />
+          <Route path="/about" element={<About />} />
+          <Route path="/contacts" element={<Contacts />} />
+          <Route path="/blog" element={<Blog />} />
+          <Route path="/blog/:id" element={<BlogPost />} />
+
+          {/* Global Module Pages - to be implemented as full features */}
+          <Route path="/supply" element={<Supply />} />
+          <Route path="/complectation" element={<GlobalModulePage title="Комплектация" type="complectation" />} />
+          <Route path="/docs" element={<GlobalModulePage title="Документооборот" type="docs" />} />
+          <Route path="/acts" element={<GlobalModulePage title="Акты (КС-2/КС-3)" type="acts" />} />
+          <Route path="/chats" element={<GlobalModulePage title="Чаты и Коммуникации" type="team" />} />
+          <Route path="/photos" element={<GlobalModulePage title="Фотоотчеты" type="photos" />} />
+
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
-      );
+      </Layout>
+    </ProtectedRoute>
+  );
+
+  // Determine which layout to show based on auth state
+  const token = tokenManager.getAccessToken();
+  const isAuthRoute = location.pathname.startsWith('/login') || 
+                      location.pathname.startsWith('/register') ||
+                      location.pathname.startsWith('/forgot-password') ||
+                      location.pathname.startsWith('/reset-password');
+
+  // If no token and not on auth route, show public routes
+  if (!token) {
+    return publicRoutes;
   }
 
-  // Main App Layout
-  return (
-    <Layout>
-          <Routes>
-            <Route path="/" element={<CompanyDashboard />} />
-            <Route path="/projects" element={<ProjectList />} />
-            <Route path="/projects/:id" element={<ProjectDashboard />} />
-            <Route path="/estimates" element={<EstimatesList />} />
-            <Route path="/estimates/:id" element={<EstimateEditor />} />
-            <Route path="/finance" element={<Finance />} />
-            <Route path="/crm" element={<CRM />} />
-            <Route path="/directories" element={<Directories />} />
-            <Route path="/resources" element={<Resources />} />
-            <Route path="/measurements" element={<Measurements />} />
-            <Route path="/settings" element={<Settings />} />
-            <Route path="/knowledge-base" element={<KnowledgeBase />} />
-            <Route path="/profile" element={<Profile />} />
+  // If needs onboarding, show onboarding routes
+  if (needsOnboarding) {
+    return onboardingRoutes;
+  }
 
-            {/* Promo Pages */}
-            <Route path="/estimates-promo" element={<EstimatesPromo />} />
-            <Route path="/finance-promo" element={<FinancePromo />} />
-            <Route path="/ai-promo" element={<AIPromo />} />
-            <Route path="/supply-promo" element={<SupplyPromo />} />
-            <Route path="/about" element={<About />} />
-            <Route path="/contacts" element={<Contacts />} />
-            <Route path="/blog" element={<Blog />} />
-            <Route path="/blog/:id" element={<BlogPost />} />
-
-            {/* Global Module Pages */}
-            <Route path="/supply" element={<GlobalModulePage title="Снабжение" type="supply" />} />
-            <Route path="/complectation" element={<GlobalModulePage title="Комплектация" type="complectation" />} />
-            <Route path="/docs" element={<GlobalModulePage title="Документооборот" type="docs" />} />
-            <Route path="/acts" element={<GlobalModulePage title="Акты (КС-2/КС-3)" type="acts" />} />
-            <Route path="/chats" element={<GlobalModulePage title="Чаты и Коммуникации" type="team" />} />
-            <Route path="/photos" element={<GlobalModulePage title="Фотоотчеты" type="photos" />} />
-
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-    </Layout>
-  );
+  // Show protected routes
+  return protectedAppRoutes;
 };
 
 const ScrollToTop = () => {

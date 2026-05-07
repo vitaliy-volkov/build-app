@@ -11,6 +11,7 @@ import {
 import { clsx } from 'clsx';
 import { useApp } from '../App';
 import { UserRole, NotificationType } from '../types';
+import { canAccessNavigationItem, navigationGroups } from '../config/navigation';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -169,8 +170,12 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
   };
 
   const isAdminOrDirector = currentUser.role === 'admin' || currentUser.role === 'director' || currentUser.role === UserRole.Admin || currentUser.role === UserRole.Director;
-  const hasFinanceAccess = ['director', 'admin', 'project_manager', 'estimator'].includes(currentUser.role) || [UserRole.Director, UserRole.Admin, UserRole.ProjectManager, UserRole.Estimator].includes(currentUser.role);
-  const hasCrmAccess = ['director', 'admin', 'project_manager', 'manager'].includes(currentUser.role) || [UserRole.Director, UserRole.Admin, UserRole.ProjectManager, UserRole.Manager].includes(currentUser.role);
+  const visibleNavigationGroups = navigationGroups
+    .map(group => ({
+      ...group,
+      items: group.items.filter(item => canAccessNavigationItem(currentUser.role, item.access)),
+    }))
+    .filter(group => group.items.length > 0);
 
   // Filter notifications for current user
   const myNotifications = notifications.filter(n => {
@@ -246,49 +251,27 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
            </button>
         </div>
 
-        {/* Nav Items */}
         <nav className="p-3 flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar">
-          {!sidebarCollapsed && <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 mt-2 px-3 transition-opacity duration-200">Главное</div>}
-          
-          <NavItem to="/" icon={BarChart3} label="Дашборд" active={location.pathname === '/'} collapsed={sidebarCollapsed} />
-          <NavItem to="/projects" icon={FolderKanban} label="Проекты" active={location.pathname === '/projects'} collapsed={sidebarCollapsed} />
-          <NavItem to="/estimates" icon={FileText} label="Сметы" active={location.pathname.startsWith('/estimates')} collapsed={sidebarCollapsed} />
-          
-          {!sidebarCollapsed && <div className="border-t border-slate-100 my-3 mx-2"></div>}
-          
-          <NavItem to="/measurements" icon={Ruler} label="Замеры" active={isActive('/measurements')} collapsed={sidebarCollapsed} />
-          <NavItem to="/schedule" icon={Calendar} label="Графики" active={isActive('/schedule')} collapsed={sidebarCollapsed} />
-          <NavItem to="/design" icon={Paintbrush} label="Дизайн" active={isActive('/design')} collapsed={sidebarCollapsed} />
-          <NavItem to="/supply" icon={Truck} label="Снабжение" active={isActive('/supply')} collapsed={sidebarCollapsed} />
-          <NavItem to="/complectation" icon={PackageCheck} label="Комплектация" active={isActive('/complectation')} collapsed={sidebarCollapsed} />
-          <NavItem to="/docs" icon={Folder} label="Документы" active={isActive('/docs')} collapsed={sidebarCollapsed} />
-          <NavItem to="/acts" icon={ScrollText} label="Акты" active={isActive('/acts')} collapsed={sidebarCollapsed} />
-          <NavItem to="/chats" icon={MessagesSquare} label="Чаты" active={isActive('/chats')} collapsed={sidebarCollapsed} />
-          <NavItem to="/photos" icon={Camera} label="Фотоотчеты" active={isActive('/photos')} collapsed={sidebarCollapsed} />
-
-          {!sidebarCollapsed && <div className="border-t border-slate-100 my-3 mx-2"></div>}
-
-          {hasCrmAccess && (
-            <NavItem to="/crm" icon={Megaphone} label="CRM" active={isActive('/crm')} collapsed={sidebarCollapsed} />
-          )}
-
-          {hasFinanceAccess && (
-             <NavItem to="/finance" icon={Banknote} label="Финансы" active={isActive('/finance')} collapsed={sidebarCollapsed} />
-          )}
-
-          {isAdminOrDirector && (
-             <NavItem to="/resources" icon={Briefcase} label="Загрузка" active={isActive('/resources')} collapsed={sidebarCollapsed} />
-          )}
-
-          <NavItem to="/directories" icon={Users} label="Справочники" active={isActive('/directories')} collapsed={sidebarCollapsed} />
-          
-          {!sidebarCollapsed && <div className="border-t border-slate-100 my-3 mx-2"></div>}
-          
-          <NavItem to="/knowledge" icon={BookOpen} label="База знаний" active={isActive('/knowledge')} collapsed={sidebarCollapsed} />
-          
-          {isAdminOrDirector && (
-            <NavItem to="/settings" icon={Settings} label="Настройки" active={isActive('/settings')} collapsed={sidebarCollapsed} />
-          )}
+          {visibleNavigationGroups.map((group, groupIndex) => (
+            <React.Fragment key={group.id}>
+              {groupIndex > 0 && !sidebarCollapsed && <div className="border-t border-slate-100 my-3 mx-2"></div>}
+              {!sidebarCollapsed && (
+                <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 mt-2 px-3 transition-opacity duration-200">
+                  {group.label}
+                </div>
+              )}
+              {group.items.map(item => (
+                <NavItem
+                  key={item.id}
+                  to={item.path}
+                  icon={item.icon}
+                  label={item.label}
+                  active={item.exact ? location.pathname === item.path : isActive(item.path)}
+                  collapsed={sidebarCollapsed}
+                />
+              ))}
+            </React.Fragment>
+          ))}
         </nav>
       </aside>
 
