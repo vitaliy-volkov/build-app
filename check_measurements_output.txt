@@ -1,0 +1,27 @@
+Measurements URL: http://localhost:3001/#/
+HAS_INIT_TEXT: False
+HAS_NO_PROJECTS_TEXT: False
+HAS_MEASUREMENTS_TITLE: True
+HAS_DRAWING_TAB: False
+HAS_ROOM_TEXT: False
+BODY_SNIPPET: Строй-Контроль | ГЛАВНОЕ | Дашборд | Проекты | Сметы | Замеры | Графики | Дизайн | Снабжение | Комплектация | Документы | Акты | Чаты | Фотоотчеты | CRM | Финансы | Загрузка | Справочники | База знаний | Настройки | Виталий Волков | DIRECTOR | Добро пожаловать, Виталий Волков |  | Перейдите в раздел "Проекты" для начала работы. |  | К списку проектов | AI Ассистент
+SCREENSHOT: f:/Code/build-app/measurements-check-token.png
+PAGE_ERRORS: []
+CONSOLE_LOGS:
+warning: cdn.tailwindcss.com should not be used in production. To use Tailwind CSS in production, install it as a PostCSS plugin or use the Tailwind CLI: https://tailwindcss.com/docs/installation
+debug: [vite] connecting...
+info: %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+debug: [vite] connected.
+log: Measurements: projects count= 0 selectedProjectId= 
+log: Measurements: measurements count= 1 measurements= [proj-1]
+log: Measurements: checking creation - selectedProjectId=  activeMeasurement= false isInitializing= false
+log: Measurements: setting floor/room - activeMeasurement= false activeFloorId= 
+log: initializeData: isAuthenticated= true
+log: initializeData: token= eyJhbGciOiJIUzI1NiIs...
+log: initializeData: apiClient token set
+log: Measurements: projects count= 0 selectedProjectId= 
+log: Measurements: measurements count= 1 measurements= [proj-1]
+log: Measurements: checking creation - selectedProjectId=  activeMeasurement= false isInitializing= false
+log: Measurements: setting floor/room - activeMeasurement= false activeFloorId= 
+log: initializeData: projects response success= true count= 5
+log: initializeData: projects loaded into state
