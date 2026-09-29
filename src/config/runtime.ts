@@ -1,4 +1,5 @@
 export const runtimeConfig = {
+  demoMode: import.meta.env.VITE_DEMO_MODE === 'true',
   // API URL: v1 base path by default for consistent frontend/backend contract.
   // Can be overridden for production deployments via VITE_API_URL.
   apiUrl: import.meta.env.VITE_API_URL || '/api/v1',

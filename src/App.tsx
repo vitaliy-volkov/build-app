@@ -50,6 +50,7 @@ import { tokenManager } from './services/tokenManager';
 import { AuthGuard } from './components/AuthGuard';
 import { useDataInit } from './hooks/useDataInit';
 import { AppProviders } from './providers/AppProviders';
+import { runtimeConfig } from './config/runtime';
 
 // --- State Management (Context) ---
 interface AppState {
@@ -278,6 +279,14 @@ const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
       const token = localStorage.getItem('access_token');
       console.log('initializeData: token=', token ? token.substring(0, 20) + '...' : 'null');
+
+      if (runtimeConfig.demoMode) {
+        setProjectsState(MOCK_PROJECTS);
+        const stored = localStorage.getItem('custom_counterparties');
+        const customCounterparties = stored ? JSON.parse(stored) : [];
+        setCounterpartiesState([...MOCK_COUNTERPARTIES, ...customCounterparties]);
+        return;
+      }
       
       // Проверим что токен установлен в apiClient
       console.log('initializeData: apiClient token set');

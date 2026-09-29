@@ -3,6 +3,8 @@ import { tokenManager } from '../services/tokenManager';
 import { apiClient } from '../services/apiClient';
 import { Project, User, Counterparty } from '../types';
 import { MOCK_PROJECTS, MOCK_COUNTERPARTIES } from '../services/mockData';
+import { runtimeConfig } from '../config/runtime';
+import { DEMO_TOKEN, readDemoUser } from '../services/demoAuth';
 
 interface DataInitState {
   isReady: boolean;
@@ -44,6 +46,23 @@ export const useDataInit = (options: DataInitOptions = {}) => {
       const token = tokenManager.getAccessToken();
       if (!token) {
         throw new Error('Not authenticated');
+      }
+
+      if (runtimeConfig.demoMode && token === DEMO_TOKEN) {
+        const currentUser = readDemoUser();
+        if (!currentUser) throw new Error('Демо-сессия завершена');
+        const stored = localStorage.getItem('custom_counterparties');
+        const customCounterparties = stored ? JSON.parse(stored) : [];
+        setState({
+          isReady: true,
+          isLoading: false,
+          error: null,
+          projects: MOCK_PROJECTS,
+          counterparties: [...MOCK_COUNTERPARTIES, ...customCounterparties],
+          currentUser,
+        });
+        onSuccess?.();
+        return;
       }
 
       // Set token in apiClient

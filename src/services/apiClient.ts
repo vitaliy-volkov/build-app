@@ -6,6 +6,7 @@ import {
   AIConfiguration, AITaskType, CompanySettings
 } from '../types';
 import { runtimeConfig } from '../config/runtime';
+import { clearDemoUser, createDemoUser, DEMO_EMAIL, DEMO_PASSWORD, DEMO_TOKEN, readDemoUser, saveDemoUser } from './demoAuth';
 
 // API Base Configuration
 const API_BASE_URL = runtimeConfig.apiUrl;
@@ -231,6 +232,22 @@ class ApiClient {
 
   // Authentication
   async login(email: string, password: string): Promise<ApiResponse<LoginResponse>> {
+    if (runtimeConfig.demoMode) {
+      if (email.trim().toLowerCase() !== DEMO_EMAIL || password !== DEMO_PASSWORD) {
+        return { success: false, error: 'Неверный email или пароль' };
+      }
+
+      const user = createDemoUser();
+      this.token = DEMO_TOKEN;
+      localStorage.setItem('access_token', DEMO_TOKEN);
+      localStorage.setItem('refresh_token', DEMO_TOKEN);
+      saveDemoUser(user);
+      return {
+        success: true,
+        data: { user, tokens: { access_token: DEMO_TOKEN, refresh_token: DEMO_TOKEN } },
+      };
+    }
+
     const response = await this.request<ApiResponse<LoginResponse>>('/auth/login', {
       method: 'POST',
       body: JSON.stringify({ email, password }),
@@ -292,6 +309,11 @@ class ApiClient {
   }
 
   async getCurrentUser(): Promise<ApiResponse<{ user: User }>> {
+    if (runtimeConfig.demoMode && this.token === DEMO_TOKEN) {
+      const user = readDemoUser();
+      if (user) return { success: true, data: { user } };
+      return { success: false, error: 'Демо-сессия завершена' };
+    }
     return this.request<ApiResponse<{ user: User }>>('/auth/me');
   }
 
@@ -303,6 +325,14 @@ class ApiClient {
   }
 
   async logout(): Promise<void> {
+    if (runtimeConfig.demoMode && this.token === DEMO_TOKEN) {
+      this.token = null;
+      localStorage.removeItem('access_token');
+      localStorage.removeItem('refresh_token');
+      clearDemoUser();
+      return;
+    }
+
     try {
       await this.request('/auth/logout', { method: 'POST' });
     } catch (error) {

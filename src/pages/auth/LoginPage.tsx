@@ -5,6 +5,8 @@ import { LayoutDashboard, Loader2, AlertCircle } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { runtimeConfig } from '../../config/runtime';
+import { DEMO_EMAIL, DEMO_PASSWORD } from '../../services/demoAuth';
 
 const loginSchema = z.object({
   email: z.string().email('Введите корректный email'),
@@ -57,6 +59,12 @@ export const LoginPage = () => {
            <p className="text-slate-500 text-sm mt-2 text-center">
              С возвращением! Введите данные для входа
            </p>
+           {runtimeConfig.demoMode && (
+             <p className="mt-3 rounded-lg bg-blue-50 px-4 py-3 text-sm text-blue-800" role="note">
+               Демо-доступ: <b>{DEMO_EMAIL}</b> / <b>{DEMO_PASSWORD}</b><br />
+               Используются тестовые данные, изменения не сохраняются на сервере.
+             </p>
+           )}
         </div>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
